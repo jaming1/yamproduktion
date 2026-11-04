@@ -57,3 +57,10 @@
 - **Erkenntnis Baugruppe:** Der Schwerpunkt liegt wegen der Passfedernuten 0,1 mm neben der Achse – Tests deshalb gegen das gewichtete Mittel der Einzelteile prüfen, nicht gegen „genau 0“.
 - **Fehler gefunden durch Test:** Die Vorgabe „koaxial zum ersten Teil“ ging verloren, sobald ein Abstand mitgegeben wurde; Qt-Auswahllisten finden Tupel nicht wieder (`findData`) – Texte wie `teil:5` verwenden.
 - **Für den Skill:** Bei Zeichnungen und Bildern das Ergebnis selbst als Bild ansehen, bevor der Test geschrieben wird.
+
+## MS9 (04.11.2026)
+- **Gut:** Fertigungszeiten als kleine Formeln mit Rechenweg in Worten – derselbe Text steht in der Oberfläche und im PDF, die Tests prüfen gegen die Handrechnung.
+- **Erkenntnis Geometrie:** Open CASCADE teilt Bohrflächen manchmal in zwei Flächen (z. B. an einer Nut). Merkmale deshalb je Durchmesser zusammenfassen, sonst wird eine Bohrung doppelt geplant.
+- **Erkenntnis:** Zahnräder sehen für die Merkmalserkennung wie „viele Bohrungen“ aus (Zahnlücken sind Zylinderstücke). Für Sonderteile die Vorlage als Hinweis nutzen statt der reinen Geometrie.
+- **Erkenntnis Darstellung:** Geldbeträge immer mit zwei Nachkommastellen; Eingaben mit Leerzeichen als Tausendertrennung müssen wieder lesbar sein.
+- **Für den Skill:** Jeder Schätz- oder Richtwert bekommt einen sichtbaren Hinweis direkt neben der Zahl (Oberfläche und PDF), nicht nur in der Dokumentation.

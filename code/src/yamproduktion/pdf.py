@@ -343,3 +343,108 @@ def stueckliste_erstellen(ergebnis, ziel: str | Path, name: str, nr: str = "", p
                             author="YamProduktion")
     doc.build(inhalt)
     return ziel
+
+
+def _dokument(ziel: Path, titel_: str, inhalt: list, quer: bool = False) -> Path:
+    from reportlab.lib.pagesizes import landscape
+    doc = SimpleDocTemplate(str(ziel), pagesize=landscape(A4) if quer else A4, leftMargin=18 * mm,
+                            rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm, title=titel_,
+                            author="YamProduktion")
+    doc.build(inhalt)
+    return ziel
+
+
+def _euro(x) -> str:
+    return "–" if x is None else f"{x:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+
+
+def arbeitsplan_erstellen(teil: dict, plan: dict, kalk, ziel: str | Path, projekt: str = "") -> Path:
+    """Arbeitsplan eines Bauteils (Lastenheft M34, M35, S10) mit Rechenweg der Zeiten und Kosten."""
+    from .fertigung.arbeitsplan import ARTEN, SCHAETZ_HINWEIS
+    from .fertigung.schnittdaten import HINWEIS as SCHNITT_HINWEIS, SPANNEN, ZUSCHLAG
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [P(f"Arbeitsplan {_x(teil['nr'])} {_x(teil['name'])}", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M} &nbsp;·&nbsp; "
+                f"Losgröße {kalk.losgroesse} &nbsp;·&nbsp; "
+                f"{'Fremdfertigung' if plan.get('fertigung') == 'fremd' else 'Eigenfertigung'}", "klein"),
+              P("Rohteil", "h2"),
+              P(f"{_x(kalk.rohteil_text)} &nbsp;·&nbsp; Werkstoff {_x(plan['rohteil'].get('werkstoff', ''))} "
+                f"&nbsp;·&nbsp; Masse {formatiere(kalk.rohteil_masse)} kg"),
+              P("Arbeitsgänge", "h2")]
+    daten = [["AG", "Arbeitsgang", "Beschreibung", "Maschine", "t_r min", "t_e min"]]
+    for g in kalk.gaenge:
+        daten.append([str(g.nr), ARTEN.get(g.art, (g.art,))[0], P(_x(g.text)), g.maschine, formatiere(g.tr),
+                      formatiere(g.te) + (" *" if g.von_hand else "")])
+    daten.append(["", "", "Summe", "", formatiere(kalk.tr_summe), formatiere(kalk.te_summe)])
+    inhalt.append(tabelle(daten, [10 * mm, 30 * mm, 60 * mm, 32 * mm, 16 * mm, 18 * mm]))
+    inhalt.append(P(f"t_e = t_h · (1 + {formatiere(ZUSCHLAG)}) + {formatiere(SPANNEN)} min (Neben- und Verteilzeit, "
+                    "Spannen – Richtwert). * = Zeit von Hand eingetragen.", "klein"))
+    inhalt.append(P("Rechenweg der Hauptzeiten", "h2"))
+    inhalt.append(P("n = v_c · 1000 / (π · d) &nbsp;·&nbsp; v_f = f · n (Fräsen: f_z · z · n) &nbsp;·&nbsp; "
+                    "t_h = L · i / v_f", "text"))
+    for g in kalk.gaenge:
+        if g.rechenweg or g.fehler:
+            inhalt.append(P(f"<b>AG {g.nr} {_x(g.text)}</b>"))
+            for zeile in g.rechenweg:
+                inhalt.append(P(_x(zeile), "klein"))
+            if g.fehler:
+                inhalt.append(P("⚠ " + _x(g.fehler), "klein"))
+    inhalt.append(P("Kosten je Stück", "h2"))
+    daten = [["Material", "Fertigung (inkl. Rüstanteil)", "Stückkosten", f"Los ({kalk.losgroesse} Stück)"],
+             [_euro(kalk.material), _euro(kalk.fertigung), _euro(kalk.stueck), _euro(kalk.los)]]
+    inhalt.append(tabelle(daten, [40 * mm, 50 * mm, 40 * mm, 40 * mm]))
+    if kalk.fremd:
+        inhalt.append(P("Fremdfertigung: " + ("Schätzung ohne Angebot (Eigenkosten + 25 %)." if kalk.fremd_geschaetzt
+                                              else "Preis laut Angebot."), "klein"))
+    for f in kalk.fehler:
+        inhalt.append(P("⚠ " + _x(f), "klein"))
+    inhalt += [Spacer(1, 6), P(_x(SCHNITT_HINWEIS), "klein"), P(_x(SCHAETZ_HINWEIS), "klein")]
+    return _dokument(ziel, f"Arbeitsplan {teil['nr']}", inhalt)
+
+
+def anfrageliste_erstellen(eintraege: list[dict], ziel: str | Path, projekt: str = "", absender: str = "") -> Path:
+    """Anfrageliste für Fremdfertigung (Lastenheft M37): je Teil Zeichnungsnummer, Werkstoff, Rohteil, Menge."""
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [P("Anfrage Fremdfertigung", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Datum: {datetime.now():%d.%m.%Y}"
+                + (f" &nbsp;·&nbsp; Anfragender: {_x(absender)}" if absender else ""), "klein"),
+              Spacer(1, 4),
+              P("Wir bitten um ein Angebot für die folgenden Teile nach beiliegender Zeichnung "
+                "(Allgemeintoleranz ISO 2768-mK, sofern nicht anders angegeben). Bitte Preis je Stück, "
+                "Lieferzeit und gegebenenfalls Mindermengenzuschlag angeben.")]
+    daten = [["Pos", "Zeichnung", "Benennung", "Werkstoff", "Rohteil / Halbzeug", "Bearbeitung", "Menge",
+              "Preis/Stück", "Lieferzeit"]]
+    for i, e in enumerate(eintraege, 1):
+        daten.append([str(i), e["nr"], P(_x(e["benennung"])), P(_x(e["werkstoff"])), P(_x(e["rohteil"])),
+                      P(_x(e["verfahren"])), str(e["menge"]), "", ""])
+    inhalt.append(tabelle(daten, [10 * mm, 18 * mm, 32 * mm, 34 * mm, 42 * mm, 58 * mm, 14 * mm, 22 * mm, 22 * mm]))
+    inhalt += [Spacer(1, 10), P("Zeichnungen und STEP-Dateien liegen bei. Rückfragen bitte an den Anfragenden.",
+                                "klein")]
+    return _dokument(ziel, "Anfrage Fremdfertigung", inhalt, quer=True)
+
+
+def kalkulation_erstellen(name: str, nr: str, zeilen: list, summe: float, fehlend: list, anzahl: int,
+                          ziel: str | Path, projekt: str = "") -> Path:
+    """Kostenkalkulation einer Baugruppe (Lastenheft M36)."""
+    from .fertigung.arbeitsplan import SCHAETZ_HINWEIS
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [P(f"Kostenkalkulation {_x(nr)} {_x(name)}", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M} &nbsp;·&nbsp; "
+                f"{anzahl} Baugruppe(n)", "klein"), Spacer(1, 4)]
+    daten = [["Pos", "Menge", "Benennung", "Sachnummer", "Art", "Einzel", "Gesamt", "Hinweis"]]
+    for z in zeilen:
+        daten.append([str(z.pos), str(z.menge), P(_x(z.benennung)), P(_x(z.sachnummer)), z.art, _euro(z.einzel),
+                      _euro(z.gesamt), P(_x(z.hinweis), "klein")])
+    inhalt.append(tabelle(daten, [10 * mm, 12 * mm, 36 * mm, 30 * mm, 14 * mm, 20 * mm, 22 * mm, 30 * mm]))
+    inhalt.append(Spacer(1, 6))
+    inhalt.append(P(f"<b>Summe {_euro(summe)}</b>" + (f" für {anzahl} Baugruppen" if anzahl > 1 else " je Baugruppe")))
+    if fehlend:
+        inhalt.append(P("⚠ Ohne Preis (nicht in der Summe): " + _x(", ".join(fehlend)), "klein"))
+    inhalt.append(P(_x(SCHAETZ_HINWEIS), "klein"))
+    return _dokument(ziel, f"Kostenkalkulation {name}", inhalt)

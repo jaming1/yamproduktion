@@ -97,3 +97,11 @@
 - Neue Seite **Zeichnungen**: A3-Blatt nach ISO 128 (Projektionsmethode 1) mit Vorder-, Seiten- und Draufsicht (nur so viele wie nötig), Schnitt A–A mit Schraffur, Mittellinien, automatischer Bemaßung (Gesamtmaße, Ø, Absätze, Lochkreise), Passmaßen (z. B. Ø80 k6), Schriftfeld, Maßstab automatisch; Baugruppen mit Positionsnummern und Stückliste auf dem Blatt; Export **PDF** und **DXF**
 - Test Gondel-Baugruppe der KWA: Hauptwelle, Rotornabe, 2 × 22216 E, 12 Blattschrauben M16 mit Muttern; 120 automatische Tests (5 neu) und Screenshots hell/dunkel
 
+## 04.11.2026 – MS9 Fertigungsplanung & Kosten ✅
+- **Schnittdaten und Hauptzeiten** (Drehen, Plandrehen, Fräsen, Bohren, Sägen, Brennschneiden) nach Tabellenbuch-Formeln mit Rechenweg; Richtwerte je Werkstoffgruppe, als ungeprüft gekennzeichnet
+- **Rohteil** automatisch: Rundstahl (nächster Normdurchmesser + Aufmaß), Ronde aus Blech, Flachstahl/Blech, Gussrohteil; Rohteilmasse
+- Neue Seite **Arbeitspläne**: Vorschlag aus der 3D-Geometrie (Absätze, Bohrungen, Lochkreise, Passfedernuten), Arbeitsgänge mit Maschine, Rüst- und Stückzeit, Losgröße, Eigen-/Fremdfertigung mit Angebotspreis, Stückkosten; Arbeitsplan als PDF; AP-001 … verknüpft mit dem Bauteil (Änderung → „neu prüfen“)
+- Neue Seite **Kosten & Anfragen**: Herstellkosten je Baugruppe (Eigen, Fremd, Zukauf) für beliebige Stückzahl, Kostensätze des Projekts änderbar, Kalkulation als PDF, **Anfrageliste** für Fremdfertigung als PDF
+- Dateiformat Version 6 (ältere Projekte werden beim Öffnen umgestellt)
+- Test mit der Gondel: Hauptwelle in Eigenfertigung, Nabe als Gussteil fremd, Lager und Schrauben als Zukauf; 125 automatische Tests (5 neu) und Screenshots hell/dunkel
+

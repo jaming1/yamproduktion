@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -45,6 +45,7 @@ OBJEKTE = {
     "berechnung":   ("B", "titel", "P4", "Berechnung"),
     "teil":         ("T", "name", "P5", "Bauteil"),
     "baugruppe":    ("G", "name", "P5", "Baugruppe"),
+    "arbeitsplan":  ("AP", "name", "P6", "Arbeitsplan"),
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -152,6 +153,10 @@ CREATE TABLE IF NOT EXISTS teil (
 CREATE TABLE IF NOT EXISTS baugruppe (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL DEFAULT '', definition TEXT NOT NULL DEFAULT '{}', masse REAL,""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS arbeitsplan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, teil_id INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}', kosten REAL,""" + _GEMEINSAM + """
 );
 CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
@@ -309,8 +314,8 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 5:
-            # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen)
+        if von < 6:
+            # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -970,6 +975,104 @@ class Projekt:
     def baugruppe_loeschen(self, id_: int) -> None:
         self.objekt_loeschen("baugruppe", id_)
 
+    # ================================================================ Fertigung & Kosten (MS9)
+    def kostensaetze(self) -> dict:
+        """Stundensätze, Materialpreise (€/kg) und Zukaufpreise (€/Stück) des Projekts – Vorgabe: Schätzwerte."""
+        from .fertigung import arbeitsplan as A
+        saetze = A.standard_saetze()
+        gespeichert = json.loads(self.meta("kostensaetze", "{}") or "{}")
+        for k in saetze:
+            saetze[k].update(gespeichert.get(k, {}))
+        return saetze
+
+    def kostensaetze_speichern(self, saetze: dict) -> None:
+        self._setze_meta("kostensaetze", json.dumps(saetze, ensure_ascii=False))
+        self._db.commit()
+
+    def arbeitsplan_von_teil(self, teil_id: int) -> dict | None:
+        z = self._db.execute("SELECT id FROM arbeitsplan WHERE teil_id=?", (teil_id,)).fetchone()
+        return self.arbeitsplan(z[0]) if z else None
+
+    def arbeitsplan(self, id_: int) -> dict:
+        a = self.objekt("arbeitsplan", id_)
+        a["daten"] = json.loads(a["daten"])
+        return a
+
+    def arbeitsplaene(self) -> list[dict]:
+        liste = self.liste("arbeitsplan")
+        for a in liste:
+            a["daten"] = json.loads(a["daten"])
+        return liste
+
+    def arbeitsplan_vorschlag(self, teil_id: int) -> dict:
+        from .fertigung import arbeitsplan as A
+        t = self.teil(teil_id)
+        return A.vorschlag(self.teil_form(teil_id)["form"], t["werkstoff"], t["name"], t["vorlage"])
+
+    def kalkulation_teil(self, teil_id: int, daten: dict | None = None):
+        """Kalkulation eines Bauteils aus seinem (oder dem übergebenen) Arbeitsplan."""
+        from .cad.geometrie import eigenschaften
+        from .fertigung import arbeitsplan as A
+        if daten is None:
+            a = self.arbeitsplan_von_teil(teil_id)
+            if a is None:
+                return None
+            daten = a["daten"]
+        roh = daten.get("rohteil", {})
+        vol = fl = 0.0
+        if roh.get("art") not in ("Rundstahl", "Flachstahl", "Blech"):
+            e = eigenschaften(self.teil_form(teil_id)["form"])
+            vol, fl = e.volumen, e.flaeche
+        return A.kalkulieren(daten, self.kostensaetze(), vol, fl)
+
+    def arbeitsplan_speichern(self, teil_id: int, daten: dict) -> dict:
+        """Arbeitsplan eines Bauteils anlegen oder als neue Version speichern (verknüpft mit dem Teil)."""
+        t = self.teil(teil_id)
+        k = self.kalkulation_teil(teil_id, daten)
+        kosten = k.stueck if k else None
+        name = f"{t['nr']} {t['name']}"
+        text = json.dumps(daten, ensure_ascii=False)
+        alt = self.arbeitsplan_von_teil(teil_id)
+        if alt is None:
+            aid = self.objekt_neu("arbeitsplan", teil_id=teil_id, name=name, daten=text, kosten=kosten)["id"]
+            self.verknuepfen("teil", teil_id, "arbeitsplan", aid, "Bauteil")
+        else:
+            aid = alt["id"]
+            self._db.execute("UPDATE arbeitsplan SET name=?, daten=?, kosten=?, version=version+1, status='Entwurf', "
+                             "geaendert=? WHERE id=?", (name, text, kosten, _jetzt(), aid))
+            self._protokollieren("arbeitsplan", aid, f"Version {alt['version'] + 1}: gespeichert")
+        self._db.commit()
+        return self.arbeitsplan(aid)
+
+    def anfrage_eintraege(self) -> list[dict]:
+        """Alle Teile mit Fremdfertigung für die Anfrageliste (Lastenheft M37)."""
+        from .fertigung import arbeitsplan as A
+        out = []
+        for ap in self.arbeitsplaene():
+            d = ap["daten"]
+            if d.get("fertigung") != "fremd":
+                continue
+            t = self.teil(ap["teil_id"])
+            verfahren = ", ".join(A.ARTEN.get(v["art"], (v["art"],))[0] for v in d.get("vorgaenge", [])
+                                  if v["art"] not in ("manuell",)) or "nach Zeichnung"
+            out.append({"nr": t["nr"], "benennung": t["name"], "werkstoff": t["werkstoff"],
+                        "rohteil": A.rohteil_text(d.get("rohteil", {})), "verfahren": verfahren,
+                        "menge": int(d.get("losgroesse") or 1), "teil_id": t["id"]})
+        return out
+
+    def kalkulation_baugruppe(self, baugruppe_id: int, anzahl: int = 1):
+        """(Zeilen, Summe, fehlende Preise, Kalkulationen je Bauteil) für eine gespeicherte Baugruppe."""
+        from .fertigung import arbeitsplan as A
+        g = self.baugruppe(baugruppe_id)
+        r = self.baugruppe_bauen(g["definition"])
+        kalk = {}
+        for t in self.teile():
+            k = self.kalkulation_teil(t["id"])
+            if k is not None:
+                kalk[t["nr"]] = k
+        zeilen, summe, fehlend = A.baugruppe_kalkulieren(r.stueckliste, kalk, self.kostensaetze(), anzahl)
+        return zeilen, summe, fehlend, kalk
+
     # ================================================================ Allgemeine Objekte (MS3)
     _FELDER = {
         "idee": {"titel", "problem", "nutzen", "beschreibung", "ier", "ressourcen", "bild"},
@@ -979,6 +1082,7 @@ class Projekt:
         "variante": {"name", "beschreibung"},
         "teil": {"vorlage", "name", "parameter", "werkstoff", "masse", "volumen"},
         "baugruppe": {"name", "definition", "masse"},
+        "arbeitsplan": {"teil_id", "name", "daten", "kosten"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
@@ -1057,6 +1161,10 @@ class Projekt:
                 self.objekt_loeschen("loesungsidee", l["id"])
         elif typ == "loesungsidee":
             self._db.execute("UPDATE loesung SET loesungsidee_id=NULL WHERE loesungsidee_id=?", (id_,))
+        elif typ == "teil":
+            ap = self.arbeitsplan_von_teil(id_)
+            if ap:
+                self.objekt_loeschen("arbeitsplan", ap["id"])
         self._db.execute(f"DELETE FROM {typ} WHERE id=?", (id_,))
         self._phase_in_arbeit(PHASE_VON_TYP[typ], f"{alt['nr']} gelöscht")
         self._db.commit()
