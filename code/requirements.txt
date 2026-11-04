@@ -1,0 +1,5 @@
+PySide6>=6.6
+pint>=0.23
+reportlab>=4.0
+cadquery-ocp>=7.7
+numpy>=1.24

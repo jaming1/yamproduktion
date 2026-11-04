@@ -1,0 +1,91 @@
+# Changelog – YamProduktion
+
+## 04.11.2026
+- Projektordner angelegt
+- `docs/01_IDEE.md` v0.1 (Entwurf)
+- `docs/01_IDEE.md` v0.2: Desktop-Programm, Mini-Windkraftanlage 5–10 kW als erstes Produkt, eigenes CAD (mit Ressourcen-Hinweis), TRIZ-Modul
+- `docs/01_IDEE.md` v1.0 ✅ freigegeben (CAD auf Geometriekern, nur macOS, Windkraftanlage wird gebaut)
+- `docs/02_LASTENHEFT.md` v0.1 (Entwurf)
+- `docs/02_LASTENHEFT.md` v1.0 ✅ freigegeben
+- `docs/03_PLAN.md` v0.1 (Entwurf) und `docs/ENTSCHEIDUNGEN.md` angelegt
+- `docs/03_PLAN.md` v1.0 ✅ freigegeben, Technik-Stapel (E4) bestätigt
+
+## 04.11.2026 – MS1 Minimaler Prototyp ✅
+- Mac-Programm (Python + PySide6) mit Startskript `code/start.command`
+- Projektdatei `.yamp` (SQLite), sofortiges Speichern, Versionen je Anforderung
+- Anforderungen mit Zielwert, Einheit (Prüfung über Pint) und Priorität; Vorlage Kleinwindanlage
+- Berechnung „Rotorauslegung aus Nennleistung“ mit Rechenweg, Prüfungen (Betz-Grenze, cp, Blattspitzengeschwindigkeit) und Quellen; Übernahme der Werte aus den Anforderungen
+- PDF-Berechnungsprotokoll
+- Hell-/Dunkel-/Automatikmodus, einklappbare Seitenleiste (Zustand wird gemerkt), Tastenkürzel
+- 15 automatische Tests inkl. Oberflächen-Screenshots hell/dunkel
+
+## 04.11.2026 – MS2 Produktmodell & Rückverfolgung ✅
+- Phasen P1–P9 mit Phasentor: Freigabe nur ohne offene Punkte; Freigabe gibt alle Objekte der Phase frei; Änderungen öffnen das Tor wieder
+- Jedes Objekt mit Nummer, Version, Status (Entwurf / geprüft / freigegeben / neu prüfen) und Verlauf
+- Verknüpfungen Anforderung → Berechnung (entstehen automatisch beim Speichern, wenn die Werte aus Anforderungen stammen); Kreise werden verhindert
+- Änderungswirkung: geänderter Zielwert oder Einheit markiert alle abhängigen Objekte (über alle Stufen) als „neu prüfen“
+- „Neu berechnen“ übernimmt die aktuellen Anforderungswerte inkl. Einheitenumrechnung (z. B. 8000 W → 8 kW)
+- Neue Seite „Berechnungen“ mit Status, Neu berechnen, Als geprüft markieren, PDF je Version
+- Rückverfolgungs-Panel (einklappbar) mit Sprung zu verknüpften Objekten
+- Eigenschaften (Art „Eigenschaft“) neben Anforderungen
+- Automatische Sicherung beim Öffnen (letzte 10), Umstellung alter Projektdateien ohne Datenverlust
+- 26 automatische Tests inkl. Abnahmekriterium 5 (5 → 10 kW) und Screenshots hell/dunkel
+
+## 04.11.2026 – MS3 TRIZ & Konzept ✅
+- Neue Seite „Ideen & TRIZ“: Ideen mit Problem, Nutzen, idealem Endergebnis (IER) und Ressourcen
+- TRIZ: 39 Parameter, 40 Prinzipien (deutsch, mit Kurzbeschreibung), Widerspruchsmatrix (1248 Zellen, mit Quellenangabe), Trennungsprinzipien für physikalische Widersprüche; Lösungsideen werden je Prinzip notiert
+- Neue Seite „Funktionen“: Funktionsbaum (Gesamt-/Teilfunktionen), Anforderungen zuordnen; Änderung einer Anforderung markiert die Funktion „neu prüfen“
+- Neue Seite „Konzept“: morphologischer Kasten (Lösungswege je Teilfunktion, TRIZ-Ideen übernehmen, Varianten), Nutzwertanalyse (Gewichte, Punkte 0–10, bester markiert), Auswahl nur mit Begründung
+- Änderungswirkung erweitert: geänderte Lösungswege oder Bewertungen setzen die gewählte Variante auf „neu prüfen“; Phasentore P1 und P3 mit eigenen Prüfungen
+- Produkt-Lastenheft als PDF (Knopf in der Übersicht)
+- Projektdateien werden automatisch auf Format 3 umgestellt
+- 41 automatische Tests inkl. Konzeptwahl der Windkraftanlage und Screenshots hell/dunkel
+
+## 04.11.2026 – MS4 Windkraft-Auslegung & Lastannahmen ✅
+- Gemeinsame Rechenseite für alle Berechnungen: Eingaben, Ergebnis, Prüfungen, Diagramm, Tabellen, Rechenweg, Quellen, unbelegte Stellen (gelb)
+- „Werte aus dem Projekt übernehmen“ holt Werte aus Anforderungen **und aus anderen Berechnungen**; Verknüpfung Berechnung → Berechnung mit Einheitenumrechnung
+- Änderungskette: Anforderung → Rotor → Ertrag/Lasten/Antrieb werden markiert und in Abhängigkeitsreihenfolge neu gerechnet
+- Rotorauslegung: Rotorschub und Schubbeiwert nach Impulstheorie
+- Neu: Leistungskurve und Jahresertrag (Hellmann-Höhenprofil, Weibull/Rayleigh, Volllaststunden, Kapazitätsfaktor, Diagramm)
+- Neu: Lastannahmen nach IEC 61400-2, vereinfachtes Lastmodell: Lastfälle A, B, D, E, F, H, Teilsicherheitsbeiwerte, Bemessungslasten; E und F als unbelegt gekennzeichnet
+- Neu: Antriebsstrang und Generatorauswahl (Direktantrieb mit Polpaarzahl oder Getriebe mit Übersetzung/Stufen), Abgleich mit dem Wirkungsgrad der Rotorauslegung
+- Neu: Werkstoffdatenbank (14 Werkstoffe: Baustahl, Vergütungsstahl, Edelstahl, Guss, Aluminium, GFK) mit Suche
+- PDF-Protokolle mit Tabellen, Diagramm und Abschnitt „Unbelegt“
+- 60 automatische Tests, darunter Prüfwerte aus der Literatur (Betz cT = 8/9, Rayleigh-Energiemusterfaktor 6/π, Weibull-Moment c³·Γ(1+3/k)) und Handrechnungen der Lastfälle
+
+## 04.11.2026 – MS5 Maschinenelemente ✅
+- Neun neue Berechnungen auf der gemeinsamen Rechenseite, in der Seitenleiste unter „Maschinenelemente“:
+  - **Welle** (vereinfacht nach DIN 743): Biegung, Torsion, Dauerfestigkeit mit Kerbwirkung, Sicherheit gegen Fließen und Dauerbruch, Durchbiegung und Neigung am Lager
+  - **Lager** (ISO 281): Lagerkräfte des fliegenden Rotors, äquivalente Last, L10h und modifizierte Lebensdauer
+  - **Schrauben** (VDI 2230, vereinfacht): Montagevorspannkraft, Anziehmoment, Klemmkraft, Dauerhaltbarkeit
+  - **Passfeder** (DIN 6885/6892) und **Pressverband** (DIN 7190): Flächenpressung, Fugendruck, Rutschsicherheit
+  - **Schweißnaht** (EN 1993-1-8, richtungsbezogenes Verfahren): ringsum laufende Kehlnaht Rohr an Flansch
+  - **Getriebe** (DIN 3990, vereinfacht): Stirnrad- oder Planetenstufe, Profilüberdeckung, Flanken- und Zahnfußsicherheit, Montage- und Nachbarbedingung
+  - **Turm & Fundament**: Kippmoment, Spannung, Beulgrenze, Kopfauslenkung, Eigenfrequenz gegen 1P/3P, Kraft je Flanschschraube, Bodenpressung, Kippsicherheit
+  - **Bremse**: Bremszeit, Umdrehungen bis Stillstand, Wärme, Zuspannkraft
+- Werte fließen durch die Kette: Lasten → Turm → Flanschschrauben und Fußnaht; Lasten → Welle, Lager, Passfeder; Antriebsstrang → Getriebe; Rotor und Lasten → Bremse
+- Werkstoffdatenbank: 42CrMo4 vergütet 40–100 mm ergänzt (15 Werkstoffe)
+- Seitenleiste mit Gruppen „Windkraft“ und „Maschinenelemente“
+- 87 automatische Tests (27 neu) (geschlossene Lösungen, Tabellenwerte, Handrechnungen, Energiebilanz) und Screenshots hell/dunkel
+
+## 04.11.2026 – MS6 CAD-Grundlage & Vorlagen-Teile ✅
+- Geometriekern Open CASCADE eingebunden (Paket `cadquery-ocp`, wird beim ersten Start automatisch installiert)
+- Neue Seite **Bauteile (3D)** (Seitenleiste › Konstruktion) mit vier parametrischen Vorlagen:
+  - **Rotorwelle**: Nabensitz mit Passfedernut (DIN 6885, Form A), zwei Lagersitze, Bund, Generatorzapfen, Fasen; Maße aus Welle und Passfeder
+  - **Turmflansch** mit Rohrstutzen und Lochkreis; Maße aus Turm, Durchgangsloch aus der Schraubenberechnung (ISO 273 mittel)
+  - **Rotornabe** mit Bohrung, Passfedernut und Blattanschluss-Scheibe; Maße aus dem Pressverband
+  - **Stirnrad** mit echter Evolventenverzahnung (glatte Flanken als B-Spline); Maße aus dem Getriebe
+- 3D-Ansicht: drehen (Maus links oder Pfeiltasten), verschieben (Maus rechts), zoomen (Mausrad, +/−), Doppelklick = alles zeigen, Ansichten Iso/Vorne/Oben/Seite, Halbschnitt mit verschiebbarer Schnittebene (Schnittfläche orange)
+- Masse, Volumen und Abmessungen sofort; unmögliche Maße werden mit Begründung abgelehnt
+- Export **STEP** (für Fertiger und andere CAD-Programme) und **STL** (3D-Druck)
+- Bauteile im Projekt (T-001 …) mit Version, Status und Verknüpfung zu den Berechnungen: Ändert sich eine Berechnung, wird das Teil „neu prüfen“; „Neu erzeugen“ übernimmt die neuen Maße
+- Projektdateien werden automatisch auf Format 4 umgestellt
+- 104 automatische Tests (17 neu: Geometrie gegen geschlossene Formeln, STEP hin und zurück, Änderungskette Berechnung → Bauteil) und Screenshots hell/dunkel
+
+## 04.11.2026 – MS7 Skizzieren & Modellieren ✅
+- Neue Seite **Modellieren** (Seitenleiste › Konstruktion) für freie Teile mit **Feature-Baum**: Skizze, Extrusion (auch symmetrisch, umgekehrt, abziehen), Rotation, Bohrung (Durchgang oder Sackloch), Fase, Verrundung, Muster (Kreis oder Reihe), STEP-Import
+- **Skizzen-Editor**: Linie, Rechteck, Kreis, Bogen, Hilfslinie; Fangen an vorhandenen Punkten; Bedingungen (waagerecht, senkrecht, parallel, rechtwinklig, gleich, tangential, deckungsgleich, fest) und Bemaßungen (Länge, Abstand, Ø, R, Winkel) – Maße erscheinen direkt in der Skizze; Anzeige „vollständig bestimmt“ bzw. offene Freiheitsgrade; widersprüchliche Bedingungen werden mit Meldung abgewiesen
+- **Parameter-Tabelle** mit Formeln (z. B. `D = d + 80`); Werte direkt aus gespeicherten Berechnungen mit `ber("welle", "d")`
+- Fehler im Feature-Baum halten nur dieses Feature an: Meldung mit Grund, alles davor bleibt sichtbar
+- Freie Teile werden als Bauteil gespeichert (Liste „Frei modelliert“), mit Verknüpfung zu den benutzten Berechnungen: ändert sich die Berechnung, wird das Teil „neu prüfen“ und „Neu erzeugen“ baut es mit den neuen Werten
+- 115 automatische Tests (11 neu: Formeln, Löser, Volumen gegen geschlossene Formeln, Änderungskette, Lagerdeckel komplett über die Oberfläche) und Screenshots hell/dunkel
