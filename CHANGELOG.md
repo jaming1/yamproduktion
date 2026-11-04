@@ -121,5 +121,5 @@
 - Neue Seite **Wartung**: Wartungsplan mit Intervallen, erstem Intervall, Verschleißteilen und Fälligkeit; Lagertausch aus L10h und Betriebsstunden; als PDF
 - **Rückmeldung**: Mängel und Erfahrungen werden Ideen in Phase P1 für die nächste Version
 - IB-001 … und WP-001 … verknüpft mit ihren Quellen (Änderung → „neu prüfen“); Dateiformat Version 8
-- 136 automatische Tests (7 neu) und Screenshots hell/dunkel
+- 133 automatische Tests (4 neu) und Screenshots hell/dunkel
 
