@@ -179,5 +179,5 @@ def test_schema2_wird_auf_3_umgestellt(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(tmp_path / "KWA.yamp")
-    assert p.meta("schema_version") == "6"
+    assert p.meta("schema_version") == "7"
     assert p.objekt_neu("idee", titel="neu")["nr"] == "I-001"

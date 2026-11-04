@@ -105,3 +105,13 @@
 - Dateiformat Version 6 (ältere Projekte werden beim Öffnen umgestellt)
 - Test mit der Gondel: Hauptwelle in Eigenfertigung, Nabe als Gussteil fremd, Lager und Schrauben als Zukauf; 125 automatische Tests (5 neu) und Screenshots hell/dunkel
 
+## 04.11.2026 – MS10 Montage & Montageplatte ✅ (Version 0.10.0)
+- Neue Seite **Montagepläne**: Vorschlag aus der Baugruppe (Vorrichtung → Grundteil → Passfedern → Lager → Bauteile → Scheiben → Schrauben → Muttern → Endkontrolle) mit Tätigkeit, Teilen, Werkzeugen, Anzugsmomenten, Prüfschritten und Zeit; alles änderbar, Schritte verschieben/einfügen/löschen; Prüfung auf fehlende oder doppelte Einbauten
+- **Anzugsmomente** aus der Schraubenberechnung (gleiches Gewinde und gleiche Klasse) oder nach VDI 2230 vereinfacht für 8.8 als Richtwert; Hinweis bei Klassen-Widerspruch
+- **Fügetemperatur** der Nabe aus der Pressverband-Berechnung, Lager-Anwärmtemperatur als Herstellerrichtwert
+- **Montageplatte** als neue CAD-Vorlage: Grundplatte, zwei Auflageböcke mit Halbschalen, Befestigungslöcher, Aufnahmepunkte; Maße automatisch aus der Baugruppe (längste freie Wellenstelle, größter Radius)
+- **Explosionsdarstellung** mit Schieber; 3D-Ansicht zeigt den Zustand nach jedem Schritt, neue Teile farbig
+- **Montageanleitung als PDF** mit Explosionsbild, Teileliste, Werkzeugliste, Vorrichtung mit Aufnahmepunkten, je Schritt einem Bild aus dem CAD, Anzugsmomenten, Prüfschritten zum Abhaken und Freigabefeld
+- Montagepläne M-001 … verknüpft mit Baugruppe und Vorrichtung (Änderung → „neu prüfen“); Dateiformat Version 7
+- 129 automatische Tests (4 neu) und Screenshots hell/dunkel
+

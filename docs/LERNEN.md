@@ -64,3 +64,11 @@
 - **Erkenntnis:** Zahnräder sehen für die Merkmalserkennung wie „viele Bohrungen“ aus (Zahnlücken sind Zylinderstücke). Für Sonderteile die Vorlage als Hinweis nutzen statt der reinen Geometrie.
 - **Erkenntnis Darstellung:** Geldbeträge immer mit zwei Nachkommastellen; Eingaben mit Leerzeichen als Tausendertrennung müssen wieder lesbar sein.
 - **Für den Skill:** Jeder Schätz- oder Richtwert bekommt einen sichtbaren Hinweis direkt neben der Zahl (Oberfläche und PDF), nicht nur in der Dokumentation.
+
+## MS10 (04.11.2026)
+- **Gut:** Die Montageszene wird je Einbau nur einmal vernetzt; Lochkreis-Exemplare, Explosion und Montagezustand sind nur Punkt-Verschiebungen und Masken – dadurch flüssig und ohne neue Geometrie.
+- **Erkenntnis Fachlich:** Die Schraubenberechnung der Vorlage rechnet in 10.9, die Normteile sind 8.8. Ein Moment darf nur bei gleicher Klasse übernommen werden – der Plan zeigt den Widerspruch jetzt an.
+- **Erkenntnis:** Wird ein Wert (Anzugsmoment) in einer Tabelle geändert, muss er auch im Fließtext und in den Prüfschritten nachgezogen werden, sonst widerspricht sich die Anleitung.
+- **Erkenntnis Darstellung:** Bilder für ein PDF immer mit hellem Hintergrund rendern, egal welches Thema die Oberfläche gerade hat.
+- **Für den Skill:** Nachträgliche Optionen (hier: Vorrichtung) müssen alle Stellen anpassen, die von ihnen abhängen (Schritt einfügen, Text „Prismen“ → „Auflagen“), statt nur einen Schalter zu setzen.
+

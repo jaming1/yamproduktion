@@ -1,4 +1,4 @@
-"""Parametrische Vorlagen-Teile (Lastenheft M29, S6): Welle, Flansch, Nabe, Zahnrad.
+"""Parametrische Vorlagen-Teile (Lastenheft M29, S6, M39): Welle, Flansch, Nabe, Zahnrad, Montageplatte.
 
 Jede Vorlage beschreibt ihre Parameter wie eine Berechnung (FELDER, BERECHNUNGS_QUELLEN). Dadurch
 übernimmt ein Teil seine Maße direkt aus den gespeicherten Berechnungen und wird bei deren Änderung
@@ -407,7 +407,94 @@ ZAHNRAD = Vorlage(
                          "b_mm": ("getriebe", "b"), "alpha": ("getriebe", "α")},
 )
 
-VORLAGEN = {v.TYP: v for v in (WELLE, FLANSCH, NABE, ZAHNRAD)}
+
+# ================================================================ Montageplatte (MS10, Lastenheft M39)
+@dataclass
+class MontageplatteParameter:
+    d_auflage: float = 90.0
+    z_1: float = 450.0
+    z_2: float = 650.0
+    achshoehe: float = 210.0
+    laenge: float = 400.0
+    z_start: float = 350.0
+    breite: float = 240.0
+    dicke: float = 25.0
+    b_bock: float = 40.0
+    d_befestigung: float = 18.0
+    werkstoff: str = werkstoffe.bezeichnung(werkstoffe.werkstoff("S235JR"))
+
+
+def _x_zylinder(d: float, x0: float, hoehe: float, y: float, z: float):
+    """Zylinder mit Achse in +x (Befestigungslöcher der Montageplatte)."""
+    return BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(x0, y, z), gp_Dir(1, 0, 0)), d / 2, hoehe).Shape()
+
+
+def _montageplatte_pruefen(p: MontageplatteParameter):
+    r = p.d_auflage / 2
+    if p.achshoehe - r < 15:
+        raise GeometrieFehler("Die Achshöhe ist zu klein: unter der Auflage bleiben weniger als 15 mm Material.")
+    if p.z_2 - p.z_1 < p.b_bock + 10:
+        raise GeometrieFehler("Die beiden Auflagen liegen zu dicht beieinander.")
+    if p.z_1 - p.b_bock / 2 < p.z_start + 10 or p.z_2 + p.b_bock / 2 > p.z_start + p.laenge - 10:
+        raise GeometrieFehler("Die Auflagen stehen über die Grundplatte hinaus – Länge oder Plattenanfang anpassen.")
+    if p.breite < p.d_auflage + 60 + 4 * p.d_befestigung:
+        raise GeometrieFehler("Die Grundplatte ist zu schmal für Auflagebock und Befestigungslöcher.")
+
+
+def montageplatte_aufnahmepunkte(p: MontageplatteParameter) -> list[dict]:
+    """Aufnahme- und Befestigungspunkte der Vorrichtung (in Koordinaten des Grundteils: Achse = z)."""
+    punkte = [{"name": f"A{i}", "text": f"Auflage {i}: Halbschale Ø{p.d_auflage + 1:g} (Spiel 1 mm), Breite "
+               f"{p.b_bock:g} mm – mit Kunststoff belegen, Teil mit Spanngurt sichern", "ort": (0.0, 0.0, z)}
+              for i, z in ((1, p.z_1), (2, p.z_2))]
+    for i, (y, z) in enumerate(_befestigung(p), 1):
+        punkte.append({"name": f"B{i}", "text": f"Befestigung Ø{p.d_befestigung:g} (z. B. M16 auf Werkbank/Nutentisch)",
+                       "ort": (-p.achshoehe - p.dicke, y, z)})
+    return punkte
+
+
+def _befestigung(p: MontageplatteParameter) -> list[tuple[float, float]]:
+    a = 1.5 * p.d_befestigung
+    ys = (-p.breite / 2 + a, p.breite / 2 - a)
+    zs = (p.z_start + a, p.z_start + p.laenge - a)
+    return [(y, z) for z in zs for y in ys]
+
+
+def erzeuge_montageplatte(p: MontageplatteParameter):
+    """Montagevorrichtung: Grundplatte unter der Teileachse (−x), zwei Böcke mit Halbschalen-Auflagen.
+    Gebaut in den Koordinaten des Grundteils (Achse z), damit die Vorrichtung ohne Umrechnen darunter passt."""
+    _montageplatte_pruefen(p)
+    oben = -p.achshoehe
+    platte = quader(oben - p.dicke, -p.breite / 2, p.z_start, p.dicke, p.breite, p.laenge)
+    b_y = p.d_auflage + 60
+    boecke = [quader(oben, -b_y / 2, z - p.b_bock / 2, p.achshoehe, b_y, p.b_bock) for z in (p.z_1, p.z_2)]
+    form = vereinigen(platte, *boecke)
+    form = abziehen(form, zylinder(p.d_auflage + 1, p.laenge + 20, p.z_start - 10))
+    loecher = [_x_zylinder(p.d_befestigung, oben - p.dicke - 1, p.dicke + 2, y, z) for y, z in _befestigung(p)]
+    return abziehen(form, vereinigen(*loecher))
+
+
+MONTAGEPLATTE = Vorlage(
+    TYP="montageplatte", TITEL="Montageplatte (Vorrichtung)", KURZ="Montageplatte",
+    BESCHREIBUNG="Grundplatte mit zwei Auflageböcken (Halbschalen), auf denen das Grundteil der Baugruppe bei der "
+                 "Montage liegt. Vorschlag aus der Baugruppe auf der Seite „Montage“; Maße hier frei änderbar.",
+    FELDER=[
+        Feld("d_auflage", "Auflage-Durchmesser", "mm", 10, 1000, 1, 1, "Durchmesser des Grundteils an der Auflage"),
+        Feld("z_1", "Lage Auflage 1 (entlang der Achse)", "mm", -5000, 5000, 5, 1, ""),
+        Feld("z_2", "Lage Auflage 2", "mm", -5000, 5000, 5, 1, ""),
+        Feld("achshoehe", "Achshöhe über der Platte", "mm", 20, 2000, 5, 1, "größter Radius der Baugruppe + Freiraum"),
+        Feld("laenge", "Plattenlänge", "mm", 50, 6000, 10, 1, ""),
+        Feld("z_start", "Plattenanfang (entlang der Achse)", "mm", -5000, 5000, 5, 1, ""),
+        Feld("breite", "Plattenbreite", "mm", 50, 3000, 10, 1, ""),
+        Feld("dicke", "Plattendicke", "mm", 5, 200, 1, 1, ""),
+        Feld("b_bock", "Bockbreite", "mm", 10, 300, 1, 1, ""),
+        Feld("d_befestigung", "Befestigungsloch", "mm", 5, 50, 0.5, 1, "Ø18 für M16"),
+        Feld("werkstoff", "Werkstoff", "", auswahl=WERKSTOFFE),
+    ],
+    Eingaben=MontageplatteParameter, erzeuge=erzeuge_montageplatte,
+    BERECHNUNGS_QUELLEN={},
+)
+
+VORLAGEN = {v.TYP: v for v in (WELLE, FLANSCH, NABE, ZAHNRAD, MONTAGEPLATTE)}
 
 
 def dichte(werkstoff_bezeichnung: str) -> float:

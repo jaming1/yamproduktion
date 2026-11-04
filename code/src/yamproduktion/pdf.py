@@ -448,3 +448,78 @@ def kalkulation_erstellen(name: str, nr: str, zeilen: list, summe: float, fehlen
         inhalt.append(P("⚠ Ohne Preis (nicht in der Summe): " + _x(", ".join(fehlend)), "klein"))
     inhalt.append(P(_x(SCHAETZ_HINWEIS), "klein"))
     return _dokument(ziel, f"Kostenkalkulation {name}", inhalt)
+
+
+def _bild(png: bytes, breite_mm: float):
+    from io import BytesIO
+    from reportlab.lib.utils import ImageReader
+    from reportlab.platypus import Image
+    leser = ImageReader(BytesIO(png))
+    w, h = leser.getSize()
+    return Image(BytesIO(png), width=breite_mm * mm, height=breite_mm * mm * h / w)
+
+
+def montageanleitung_erstellen(baugruppe: dict, plan: dict, bilder: dict, stueckliste: list, ziel: str | Path,
+                               projekt: str = "", vorrichtung: dict | None = None,
+                               aufnahmepunkte: list | None = None) -> Path:
+    """Montageanleitung (Lastenheft M40, S11): Übersicht mit Explosionsdarstellung, Werkzeugliste, je Schritt ein
+    Bild aus dem CAD (neu eingebaute Teile farbig), Anzugsmomente und Prüfschritte zum Abhaken.
+    `bilder`: {"explosion": PNG, 1: PNG, 2: PNG, …} (Schritt-Nr → Bild)."""
+    from reportlab.platypus import CondPageBreak, KeepTogether
+    from .montage.montageplan import HINWEIS, gesamtzeit, werkzeugliste
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    schritte = plan.get("schritte", [])
+    inhalt = [P(f"Montageanleitung {_x(baugruppe['nr'])} {_x(baugruppe['name'])}", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M} &nbsp;·&nbsp; "
+                f"{len(schritte)} Schritte &nbsp;·&nbsp; Montagezeit ≈ {formatiere(gesamtzeit(plan))} min (Schätzwert)",
+                "klein")]
+    for h in plan.get("hinweise", []):
+        inhalt.append(P("⚠ " + _x(h), "klein"))
+    if "explosion" in bilder:
+        inhalt += [P("Explosionsdarstellung", "h2"), _bild(bilder["explosion"], 150)]
+    if stueckliste:
+        inhalt.append(P("Teile", "h2"))
+        daten = [["Pos", "Menge", "Benennung", "Sachnummer / Norm"]]
+        for p in stueckliste:
+            daten.append([str(p.pos), str(p.menge), P(_x(p.benennung)), P(_x(p.sachnummer))])
+        inhalt.append(tabelle(daten, [12 * mm, 16 * mm, 70 * mm, 66 * mm]))
+    inhalt.append(P("Werkzeuge und Hilfsmittel", "h2"))
+    inhalt.append(P(" &nbsp;·&nbsp; ".join(_x(w) for w in werkzeugliste(plan)) or "–"))
+    if vorrichtung:
+        inhalt.append(P(f"Montagevorrichtung {_x(vorrichtung['nr'])} {_x(vorrichtung['name'])}", "h2"))
+        if "vorrichtung" in bilder:
+            inhalt.append(_bild(bilder["vorrichtung"], 110))
+        if aufnahmepunkte:
+            daten = [["Punkt", "Aufnahme / Befestigung", "Lage x, y, z (mm)"]]
+            for a in aufnahmepunkte:
+                daten.append([a["name"], P(_x(a["text"])), ", ".join(formatiere(v) for v in a["ort"])])
+            inhalt.append(tabelle(daten, [14 * mm, 110 * mm, 40 * mm]))
+    for st in schritte:
+        block = [P(f"Schritt {st['nr']}: {_x(st['titel'])}", "h2")]
+        if st["nr"] in bilder:
+            block.append(_bild(bilder[st["nr"]], 120))
+        block.append(P(_x(st.get("text", ""))))
+        if st.get("werkzeuge"):
+            block.append(P("<b>Werkzeuge:</b> " + ", ".join(_x(w) for w in st["werkzeuge"]), "klein"))
+        teile = [m for m in st.get("momente", [])]
+        if teile:
+            daten = [["Verbindung", "M_A", "Quelle"]]
+            for m in teile:
+                wert = "von Hand eintragen" if m.get("wert") in (None, "") else f"{formatiere(float(m['wert']))} N·m"
+                daten.append([P(_x(m.get("was", ""))), wert, P(_x(m.get("quelle", "")))])
+            block.append(Spacer(1, 3))
+            block.append(tabelle(daten, [55 * mm, 32 * mm, 80 * mm]))
+        if st.get("pruefung"):
+            daten = [["", "Prüfschritt", "i. O."]]
+            for q in st["pruefung"]:
+                daten.append(["☐", P(_x(q)), ""])
+            block.append(Spacer(1, 3))
+            block.append(tabelle(daten, [8 * mm, 139 * mm, 20 * mm]))
+        block.append(P(f"Zeit ≈ {formatiere(float(st.get('zeit') or 0))} min (Schätzwert)", "klein"))
+        inhalt += [CondPageBreak(90 * mm), KeepTogether(block[:2]), *block[2:]]
+    inhalt.append(P("Freigabe", "h2"))
+    inhalt.append(tabelle([["Montiert von", "Geprüft von", "Datum"], ["", "", ""]], [60 * mm, 60 * mm, 47 * mm]))
+    inhalt += [Spacer(1, 6), P(_x(HINWEIS), "klein")]
+    return _dokument(ziel, f"Montageanleitung {baugruppe['nr']}", inhalt)

@@ -56,7 +56,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 | Nr | Meilenstein | Ergebnis | Anforderungen | Status | Datum |
 |----|-------------|----------|---------------|--------|-------|
 | MS9 | **Fertigungsplanung & Kosten** | Arbeitspläne je Bauteil, Rohteil, Schnittdaten/Zeiten, Eigen-/Fremdfertigung, Anfrageliste, Kostenkalkulation. | M34–M37, S10 | ✅ (Schnittwerte, Stundensätze und Preise als Richt-/Schätzwerte markiert; Verzahnen und Laminieren mit Handzeit) | 04.11.2026 |
-| MS10 | **Montage & Montageplatte** | Montageplan mit Reihenfolge, Anzugsmomenten, Prüfschritten; Montageplatte als eigenes Objekt (im CAD konstruiert); Explosionsdarstellung; Montageanleitung als PDF. | M38–M40, S11 | ⏳ | |
+| MS10 | **Montage & Montageplatte** | Montageplan mit Reihenfolge, Anzugsmomenten, Prüfschritten; Montageplatte als eigenes Objekt (im CAD konstruiert); Explosionsdarstellung; Montageanleitung als PDF. | M38–M40, S11 | ✅ (Anwärmtemperaturen, Fügespiel, Zeiten als Richt-/Schätzwerte markiert; Bilder aus dem eigenen 3D-Renderer) | 04.11.2026 |
 | MS11 | **Inbetriebnahme & Betrieb** | Checklisten mit Soll/Ist, Vorlage Kleinwindanlage, Mess- und Abnahmeprotokoll (PDF), Wartungsplan, Rückmeldung in die nächste Version. | M41, M42, S12–S14 | ⏳ | |
 
 ### Etappe E – Querschnitt

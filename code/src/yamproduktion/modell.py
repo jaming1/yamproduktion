@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -46,6 +46,7 @@ OBJEKTE = {
     "teil":         ("T", "name", "P5", "Bauteil"),
     "baugruppe":    ("G", "name", "P5", "Baugruppe"),
     "arbeitsplan":  ("AP", "name", "P6", "Arbeitsplan"),
+    "montageplan":  ("M", "name", "P7", "Montageplan"),
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -157,6 +158,10 @@ CREATE TABLE IF NOT EXISTS baugruppe (
 CREATE TABLE IF NOT EXISTS arbeitsplan (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, teil_id INTEGER NOT NULL UNIQUE,
     name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}', kosten REAL,""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS montageplan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, baugruppe_id INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
 );
 CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
@@ -314,8 +319,9 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 6:
-            # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne)
+        if von < 7:
+            # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
+            # 7: Montagepläne)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -975,6 +981,95 @@ class Projekt:
     def baugruppe_loeschen(self, id_: int) -> None:
         self.objekt_loeschen("baugruppe", id_)
 
+    # ================================================================ Montage (MS10)
+    def montageplan_von_baugruppe(self, baugruppe_id: int) -> dict | None:
+        z = self._db.execute("SELECT id FROM montageplan WHERE baugruppe_id=?", (baugruppe_id,)).fetchone()
+        return self.montageplan(z[0]) if z else None
+
+    def montageplan(self, id_: int) -> dict:
+        m = self.objekt("montageplan", id_)
+        m["daten"] = json.loads(m["daten"])
+        return m
+
+    def montageplaene(self) -> list[dict]:
+        liste = self.liste("montageplan")
+        for m in liste:
+            m["daten"] = json.loads(m["daten"])
+        return liste
+
+    def montage_umfeld(self, vorrichtung_id: int | None = None):
+        """Was der Montageplan-Vorschlag aus dem Projekt braucht: Teile, Schrauben- und Pressverbandrechnungen."""
+        from .berechnungen import wert_aus_ergebnis
+        from .montage.montageplan import Umfeld
+        u = Umfeld()
+        for t in self.teile():
+            u.teile[t["id"]] = {k: t[k] for k in ("vorlage", "name", "nr", "parameter", "masse")}
+        for b in self.berechnungen():                       # neueste zuerst
+            if b.typ == "schrauben":
+                m = wert_aus_ergebnis(b.ergebnis, "M_A")
+                u.schrauben.append({"nr": b.nr, "gewinde": b.eingaben.get("gewinde"), "klasse": b.eingaben.get("klasse"),
+                                    "m_a": round(m[0], 1) if m else None})
+            elif b.typ == "pressverband" and u.pressverband is None:
+                d = wert_aus_ergebnis(b.ergebnis, "d_F")
+                ue = wert_aus_ergebnis(b.ergebnis, "Ü")
+                if d and ue:
+                    u.pressverband = {"nr": b.nr, "d_f": umrechnen(d[0], d[1], "mm"), "ue": umrechnen(ue[0], ue[1], "mm")}
+        if vorrichtung_id:
+            t = self.teil(vorrichtung_id)
+            u.vorrichtung = {"id": t["id"], "nr": t["nr"], "name": t["name"]}
+        return u
+
+    def montageplan_vorschlag(self, baugruppe_id: int, vorrichtung_id: int | None = None) -> dict:
+        from .montage import montageplan as M
+        g = self.baugruppe(baugruppe_id)
+        erg = self.baugruppe_bauen(g["definition"])
+        if erg.fehler and not erg.exemplare:
+            raise ProjektFehler(erg.fehler)
+        return M.vorschlag(g["definition"], erg, self.montage_umfeld(vorrichtung_id))
+
+    def montageplan_speichern(self, baugruppe_id: int, daten: dict) -> dict:
+        """Montageplan einer Baugruppe anlegen oder als neue Version speichern. Verknüpft mit der Baugruppe und
+        der Vorrichtung: ändert sich eine davon, wird der Plan „neu prüfen“."""
+        g = self.baugruppe(baugruppe_id)
+        name = f"{g['nr']} {g['name']}"
+        text = json.dumps(daten, ensure_ascii=False)
+        alt = self.montageplan_von_baugruppe(baugruppe_id)
+        if alt is None:
+            mid = self.objekt_neu("montageplan", baugruppe_id=baugruppe_id, name=name, daten=text)["id"]
+        else:
+            mid = alt["id"]
+            self._db.execute("UPDATE montageplan SET name=?, daten=?, version=version+1, status='Entwurf', "
+                             "geaendert=? WHERE id=?", (name, text, _jetzt(), mid))
+            self._protokollieren("montageplan", mid, f"Version {alt['version'] + 1}: gespeichert")
+            self._db.execute("DELETE FROM verknuepfung WHERE ziel_typ='montageplan' AND ziel_id=?", (mid,))
+        self.verknuepfen("baugruppe", baugruppe_id, "montageplan", mid, "Baugruppe")
+        if daten.get("vorrichtung"):
+            self.verknuepfen("teil", int(daten["vorrichtung"]), "montageplan", mid, "Vorrichtung")
+        self._db.commit()
+        return self.montageplan(mid)
+
+    def montageplatte_vorschlag(self, baugruppe_id: int) -> tuple[dict, list[str]]:
+        from .montage import montageplan as M
+        g = self.baugruppe(baugruppe_id)
+        try:
+            return M.platte_vorschlag(g["definition"], self.baugruppe_bauen(g["definition"]))
+        except ValueError as exc:
+            raise ProjektFehler(str(exc)) from exc
+
+    def montageplatte_anlegen(self, baugruppe_id: int, teil_id: int | None = None) -> dict:
+        """Montageplatte (Vorlage „montageplatte“) aus der Baugruppe vorschlagen und als Bauteil speichern
+        (mit teil_id: vorhandene Platte neu bemessen)."""
+        from .cad import geometrie, vorlagen
+        werte, _ = self.montageplatte_vorschlag(baugruppe_id)
+        form = vorlagen.erzeuge_montageplatte(vorlagen.MontageplatteParameter(**werte))
+        e = geometrie.eigenschaften(form)
+        g = self.baugruppe(baugruppe_id)
+        return self.teil_speichern("montageplatte", f"Montageplatte {g['name']}"[:60], werte,
+                                   e.masse(vorlagen.dichte(werte["werkstoff"])), e.volumen, teil_id=teil_id)
+
+    def montageplatten(self) -> list[dict]:
+        return [t for t in self.teile() if t["vorlage"] == "montageplatte"]
+
     # ================================================================ Fertigung & Kosten (MS9)
     def kostensaetze(self) -> dict:
         """Stundensätze, Materialpreise (€/kg) und Zukaufpreise (€/Stück) des Projekts – Vorgabe: Schätzwerte."""
@@ -1083,6 +1178,7 @@ class Projekt:
         "teil": {"vorlage", "name", "parameter", "werkstoff", "masse", "volumen"},
         "baugruppe": {"name", "definition", "masse"},
         "arbeitsplan": {"teil_id", "name", "daten", "kosten"},
+        "montageplan": {"baugruppe_id", "name", "daten"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
@@ -1165,6 +1261,10 @@ class Projekt:
             ap = self.arbeitsplan_von_teil(id_)
             if ap:
                 self.objekt_loeschen("arbeitsplan", ap["id"])
+        elif typ == "baugruppe":
+            mp = self.montageplan_von_baugruppe(id_)
+            if mp:
+                self.objekt_loeschen("montageplan", mp["id"])
         self._db.execute(f"DELETE FROM {typ} WHERE id=?", (id_,))
         self._phase_in_arbeit(PHASE_VON_TYP[typ], f"{alt['nr']} gelöscht")
         self._db.commit()

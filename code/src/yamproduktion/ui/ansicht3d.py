@@ -45,6 +45,7 @@ class Ansicht3D(QWidget):
         self.setAccessibleName("3D-Ansicht des Bauteils")
         self.netz: Netz | None = None
         self.schnittflaechen: np.ndarray | None = None
+        self.gruppen: np.ndarray | None = None
         self.azimut, self.elevation = ANSICHTEN["Iso"]
         self.zoom = 1.0
         self.verschiebung = np.zeros(2)
@@ -56,9 +57,11 @@ class Ansicht3D(QWidget):
 
     # ---------- Daten ----------
     def setze_netz(self, netz: Netz | None, schnitt_achse: int | None = None, schnitt_pos: float = 0.0,
-                   anpassen: bool = True):
+                   anpassen: bool = True, gruppen: np.ndarray | None = None):
+        """`gruppen`: Farbgruppe je Dreieck (0 Teil, 1 neu eingebaut, 2 Vorrichtung) – für die Montage."""
         self.netz = netz
         self.schnittflaechen = None
+        self.gruppen = gruppen
         if netz is not None:
             lo, hi = netz.punkte.min(axis=0), netz.punkte.max(axis=0)
             if anpassen or self._radius <= 0:
@@ -151,6 +154,8 @@ class Ansicht3D(QWidget):
             "hintergrund": hg,
             "teil": np.array([170, 188, 210]) if dunkel else np.array([168, 186, 208]),
             "schnitt": np.array([224, 148, 72]),
+            "neu": np.array([236, 132, 52]),
+            "vorrichtung": np.array([120, 132, 118]) if dunkel else np.array([150, 160, 146]),
             "kante": QColor(40, 48, 60) if not dunkel else QColor(12, 14, 18),
             "text": self.palette().windowText().color(),
         }
@@ -194,11 +199,15 @@ class Ansicht3D(QWidget):
 
         kanten_stift = QPen(farben["kante"], 1.2)
         schnitt = self.schnittflaechen
+        gruppen = self.gruppen if self.gruppen is not None and len(self.gruppen) == len(T) else None
+        gruppen_farbe = {1: farben["neu"], 2: farben["vorrichtung"]}
         for _, art, i in reihenfolge:
             if art == 0:
                 a, b, c = T[i]
                 if schnitt is not None and schnitt[i]:
                     rgb = np.clip(farben["schnitt"] * max(hell[i], 0.92), 0, 255).astype(int)
+                elif gruppen is not None and gruppen[i]:
+                    rgb = np.clip(gruppen_farbe[int(gruppen[i])] * hell[i], 0, 255).astype(int)
                 else:
                     rgb = np.clip(farben["teil"] * hell[i], 0, 255).astype(int)
                 farbe = QColor(int(rgb[0]), int(rgb[1]), int(rgb[2]))
