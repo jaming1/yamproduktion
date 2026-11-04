@@ -18,6 +18,9 @@
 | E14 | 04.11.2026 | Bauteile speichern nur Vorlage und Parameter, die Geometrie wird bei Bedarf neu erzeugt | Projektdatei bleibt klein; jedes Teil ist jederzeit aus den Berechnungswerten reproduzierbar | ✅ |
 | E15 | 04.11.2026 | Eigener Skizzen-Löser (Gauß-Newton mit numpy) statt SolveSpace | `python-solvespace` hat keine Mac-Pakete für Python 3.12/3.13 und steht unter GPL. Der eigene Löser (≈200 Zeilen) deckt alle Bedingungen ab, liefert verlässlich die offenen Freiheitsgrade und hält bei unterbestimmten Skizzen die Form | ✅ |
 | E16 | 04.11.2026 | Freie Teile speichern Parameter-Tabelle und Feature-Baum als JSON (Vorlage „frei“), keine Geometrie | Wie E14: klein, reproduzierbar; Werte aus Berechnungen (`ber(...)`) werden verknüpft und lösen „neu prüfen“ aus | ✅ |
+| E17 | 04.11.2026 | Baugruppen speichern nur Einbauten mit Lage-Formeln (JSON); Ausrichtung als „koaxial zu … mit Abstand, umdrehen, Lochkreis“ statt allgemeiner 3D-Zwangsbedingungen | Deckt Wellen-Lager-Naben-Verbände der KWA vollständig ab, ist eindeutig und rechnet sofort. Die QPainter-Ansicht (E13) reicht für die Gondel (≈ 30 Teile) – OpenGL erst, wenn sie zu langsam wird | ✅ |
+| E18 | 04.11.2026 | Zeichnungen selbst erzeugen: verdeckte-Kanten-Projektion aus Open CASCADE (HLR), Blatt A3 als Liste aus Linien/Texten → PDF (ReportLab), DXF R12 (selbst geschrieben, Layer je Linienart) und Bildschirm | Keine weitere Abhängigkeit; alle drei Ausgaben zeigen garantiert dasselbe. Bemaßung automatisch (Gesamtmaße, Ø, Absätze, Lochkreise); Funktionsmaße bleiben Aufgabe des Konstrukteurs | ✅ |
+| E19 | 04.11.2026 | Normteile mit vereinfachter Geometrie (kein Gewinde, Lager als Vollring × 0,62 für die Masse); Maße als „Norm, ungeprüft“ markiert | Reicht für Ansicht, Masse und Stückliste; die Werte stehen sichtbar als ungeprüft in Stückliste und Programm, bis sie mit Katalog/Tabellenbuch abgeglichen sind | ✅ |
 
 ---
 

@@ -16,11 +16,13 @@ from ..modell import DATEIENDUNG, Projekt, ProjektFehler
 from . import thema
 from .berechnungen_seite import BerechnungenSeite
 from .cad_seite import BauteilSeite
+from .baugruppen_seite import BaugruppenSeite
 from .modellier_seite import ModellierSeite
 from .konzept_seiten import FunktionenSeite, IdeenSeite, KonzeptSeite
 from .rechen_seite import RechenSeite
 from .seiten import AnforderungenSeite, NeuesProjektDialog, UebersichtSeite, WillkommenSeite
 from .werkstoff_seite import WerkstoffSeite
+from .zeichnung_seite import ZeichnungSeite
 
 # (Text, Schlüssel); Schlüssel None = Gruppenüberschrift (nicht wählbar)
 NAVIGATION = [
@@ -48,6 +50,8 @@ NAVIGATION = [
     ("KONSTRUKTION", None),
     ("   Bauteile (3D)", "bauteile"),
     ("   Modellieren", "modellieren"),
+    ("   Baugruppen", "baugruppen"),
+    ("   Zeichnungen", "zeichnungen"),
     ("Werkstoffe", "werkstoffe"),
 ]
 RECHENSEITEN = {"rotor": "rotorauslegung", "ertrag": "ertrag", "lasten": "lasten_iec", "antrieb": "antrieb",
@@ -72,6 +76,8 @@ class Hauptfenster(QMainWindow):
         self.werkstoffe = WerkstoffSeite()
         self.bauteile = BauteilSeite()
         self.modellieren = ModellierSeite()
+        self.baugruppen = BaugruppenSeite()
+        self.zeichnungen = ZeichnungSeite()
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -81,7 +87,8 @@ class Hauptfenster(QMainWindow):
                        "anforderungen": self.anforderungen, "berechnungen": self.berechnungen,
                        "rotor": self.rotor, "ideen": self.ideen, "funktionen": self.funktionen,
                        "konzept": self.konzept, "werkstoffe": self.werkstoffe,
-                       "bauteile": self.bauteile, "modellieren": self.modellieren, **self.rechenseiten}
+                       "bauteile": self.bauteile, "modellieren": self.modellieren,
+                       "baugruppen": self.baugruppen, "zeichnungen": self.zeichnungen, **self.rechenseiten}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
 
@@ -167,6 +174,8 @@ class Hauptfenster(QMainWindow):
         self.bauteile.gespeichert.connect(self.uebersicht.aktualisieren)
         self.bauteile.frei_oeffnen.connect(self._freies_teil_oeffnen)
         self.modellieren.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.baugruppen.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.baugruppen.zeichnung_oeffnen.connect(self.zeichnung_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.berechnungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
 
@@ -177,7 +186,8 @@ class Hauptfenster(QMainWindow):
 
     def _arbeitsseiten(self):
         return (self.uebersicht, self.ideen, self.anforderungen, self.funktionen, self.konzept,
-                *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren)
+                *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
+                self.baugruppen, self.zeichnungen)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -271,6 +281,8 @@ class Hauptfenster(QMainWindow):
             self.bauteile.laden()
         elif schluessel == "modellieren":
             self.modellieren.laden()
+        elif schluessel in ("baugruppen", "zeichnungen"):
+            self.seiten[schluessel].laden()
         elif schluessel in RECHENSEITEN and self.projekt:
             self.seiten[schluessel]._verknuepfung_zeigen()
 
@@ -296,12 +308,19 @@ class Hauptfenster(QMainWindow):
         elif typ == "variante":
             self.gehe_zu("konzept")
             self.konzept.auswaehlen_objekt(typ, id_)
+        elif typ == "baugruppe":
+            self.gehe_zu("baugruppen")
+            self.baugruppen.baugruppe_laden(id_)
         elif typ == "teil":
             if self.projekt and self.projekt.teil(id_)["vorlage"] == "frei":
                 self._freies_teil_oeffnen(id_)
             else:
                 self.gehe_zu("bauteile")
                 self.bauteile.teil_laden(id_)
+
+    def zeichnung_oeffnen(self, typ: str, id_: int):
+        self.gehe_zu("zeichnungen")
+        self.zeichnungen.oeffnen(typ, id_)
 
     def _freies_teil_oeffnen(self, id_: int):
         self.gehe_zu("modellieren")

@@ -89,3 +89,11 @@
 - Fehler im Feature-Baum halten nur dieses Feature an: Meldung mit Grund, alles davor bleibt sichtbar
 - Freie Teile werden als Bauteil gespeichert (Liste „Frei modelliert“), mit Verknüpfung zu den benutzten Berechnungen: ändert sich die Berechnung, wird das Teil „neu prüfen“ und „Neu erzeugen“ baut es mit den neuen Werten
 - 115 automatische Tests (11 neu: Formeln, Löser, Volumen gegen geschlossene Formeln, Änderungskette, Lagerdeckel komplett über die Oberfläche) und Screenshots hell/dunkel
+
+## 04.11.2026 – MS8 Baugruppen, Zeichnungen, Stückliste ✅
+- **Normteil-Bibliothek**: Zylinderschrauben ISO 4762, Sechskantschrauben ISO 4017, Muttern ISO 4032, Scheiben ISO 7089 (M6–M24), Rillenkugellager 62xx/63xx, Pendelrollenlager 22216–22220 E, Passfedern DIN 6885 A – mit Masse; Maße als „Norm, ungeprüft“ gekennzeichnet
+- Neue Seite **Baugruppen**: Bauteile und Normteile einbauen, koaxial ausrichten (Abstand als Formel, umdrehen, Drehung), auf Lochkreise verteilen; Kreisbezüge werden erkannt; Masse und Schwerpunkt; **automatische Stückliste** mit Export CSV und PDF; STEP der ganzen Baugruppe
+- Baugruppen G-001 … im Projekt (Dateiformat Version 5, ältere Projekte werden beim Öffnen umgestellt); eingebaute Teile sind verknüpft – Änderung am Teil → Baugruppe „neu prüfen“
+- Neue Seite **Zeichnungen**: A3-Blatt nach ISO 128 (Projektionsmethode 1) mit Vorder-, Seiten- und Draufsicht (nur so viele wie nötig), Schnitt A–A mit Schraffur, Mittellinien, automatischer Bemaßung (Gesamtmaße, Ø, Absätze, Lochkreise), Passmaßen (z. B. Ø80 k6), Schriftfeld, Maßstab automatisch; Baugruppen mit Positionsnummern und Stückliste auf dem Blatt; Export **PDF** und **DXF**
+- Test Gondel-Baugruppe der KWA: Hauptwelle, Rotornabe, 2 × 22216 E, 12 Blattschrauben M16 mit Muttern; 120 automatische Tests (5 neu) und Screenshots hell/dunkel
+

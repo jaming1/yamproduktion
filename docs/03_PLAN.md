@@ -49,7 +49,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 |----|-------------|----------|---------------|--------|-------|
 | MS6 | **CAD-Grundlage & Vorlagen-Teile** | 3D-Ansicht (drehen, zoomen, schneiden); parametrische Vorlagen-Teile Welle, Flansch, Nabe, Zahnrad **entstehen direkt aus den Berechnungswerten**; Export STEP/STL. Test: Hauptwelle aus MS5 erscheint als 3D-Teil. | M29, M33, S6, S9 | ✅ (Schnitt als Halbschnitt; STEP-Import kommt in MS7) | 04.11.2026 |
 | MS7 | **Skizzieren & Modellieren** | 2D-Skizzen mit Bemaßung und Bedingungen; Extrusion, Rotation, Bohrung, Fase, Verrundung, Muster; Parameter-Tabelle; STEP-Import. | M27, M28, M33 | ✅ (eigener Skizzen-Löser; Fase/Verrundung über Kantenauswahl statt Klick ins 3D) | 04.11.2026 |
-| MS8 | **Baugruppen, Zeichnungen, Stückliste** | Baugruppen mit Verknüpfungen; Normteil-Bibliothek; technische Zeichnung mit Ansichten, Schnitten, Bemaßung, Toleranzen, Schriftfeld; Export PDF/DXF; automatische Stückliste; Masse & Schwerpunkt. Test: Gondel-Baugruppe der KWA. | M30–M32, S8, K4 | ⏳ | |
+| MS8 | **Baugruppen, Zeichnungen, Stückliste** | Baugruppen mit Verknüpfungen; Normteil-Bibliothek; technische Zeichnung mit Ansichten, Schnitten, Bemaßung, Toleranzen, Schriftfeld; Export PDF/DXF; automatische Stückliste; Masse & Schwerpunkt. Test: Gondel-Baugruppe der KWA. | M30–M32, S8, K4 | ✅ (Ausrichtung koaxial/Abstand/Lochkreis statt allgemeiner 3D-Bedingungen; Normteilmaße ungeprüft) | 04.11.2026 |
 
 ### Etappe D – Von der Fertigung bis zur Inbetriebnahme
 

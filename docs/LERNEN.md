@@ -49,3 +49,11 @@
 - **Erkenntnis Löser:** Gauß-Newton mit der kleinsten Änderung (`lstsq`) hält unterbestimmte Skizzen ruhig; Vorzeichen (Seite, Drehsinn) aus der aktuellen Lage übernehmen, sonst klappt die Skizze um. Rang der Jacobi-Matrix = Zahl der bestimmten Freiheitsgrade.
 - **Erkenntnis CAD:** Verrundung R4 an allen Kanten einer 8-mm-Platte scheitert (oben und unten stoßen zusammen). Deshalb Kantenauswahl „senkrechte Kanten“ für Plattenecken.
 - **Für den Skill:** Bei jeder neuen Abhängigkeit drei Fragen vor dem Einbau: Gibt es Pakete für das Zielsystem? Welche Lizenz? Wie groß?
+
+## MS8 (04.11.2026)
+- **Gut:** Erst die Projektion des Geometriekerns in einem kleinen Versuch klären (welche Richtung zeigt zum Betrachter, wie liegen die Achsen), dann die Zeichnung bauen. Das hat viel Raten gespart.
+- **Gut:** Zeichnung als einfache Liste (Linie, Polygon, Text) – PDF, DXF und Bildschirm-Vorschau entstehen daraus und können nicht auseinanderlaufen.
+- **Erkenntnis Zeichnung:** Wellen werden nicht längs geschnitten und brauchen nur eine Ansicht; Absatzmaße aus den **Planflächen** nehmen, nicht aus den Zylinderenden (sonst erscheinen Fasen als 1-mm-Absätze); je Durchmesser das längste Stück für den Maßtext wählen.
+- **Erkenntnis Baugruppe:** Der Schwerpunkt liegt wegen der Passfedernuten 0,1 mm neben der Achse – Tests deshalb gegen das gewichtete Mittel der Einzelteile prüfen, nicht gegen „genau 0“.
+- **Fehler gefunden durch Test:** Die Vorgabe „koaxial zum ersten Teil“ ging verloren, sobald ein Abstand mitgegeben wurde; Qt-Auswahllisten finden Tupel nicht wieder (`findData`) – Texte wie `teil:5` verwenden.
+- **Für den Skill:** Bei Zeichnungen und Bildern das Ergebnis selbst als Bild ansehen, bevor der Test geschrieben wird.

@@ -60,7 +60,13 @@ def anwenden(app: QApplication, modus: str) -> dict:
         QWidget {{ font-size: 16px; }}
         #Seitenleiste {{ background: {f['seite']}; border-right: 1px solid {f['linie']}; }}
         #Seitenleiste QListWidget {{ background: transparent; border: none; font-size: 16px; }}
-        #Seitenleiste QListWidget::item {{ padding: 5px 14px; border-radius: 8px; margin: 1px 8px; }}
+        #Seitenleiste QListWidget::item {{ padding: 4px 14px; border-radius: 8px; margin: 1px 8px; }}
+        QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
+        QScrollBar:horizontal {{ background: transparent; height: 10px; margin: 2px; }}
+        QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{ background: {f['text2']}; border-radius: 3px;
+            min-height: 30px; min-width: 30px; }}
+        QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page, QScrollBar::sub-page {{
+            background: none; width: 0; height: 0; }}
         #Seitenleiste QListWidget::item:selected {{ background: {f['akzent']}; color: {f['akzent_text']}; }}
         #ProjektName {{ font-size: 15px; color: {f['text2']}; padding: 14px 18px 6px 18px; }}
         QLabel#Titel {{ font-size: 26px; font-weight: 600; }}

@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -44,6 +44,7 @@ OBJEKTE = {
     "variante":     ("V", "name", "P3", "Konzeptvariante"),
     "berechnung":   ("B", "titel", "P4", "Berechnung"),
     "teil":         ("T", "name", "P5", "Bauteil"),
+    "baugruppe":    ("G", "name", "P5", "Baugruppe"),
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -147,6 +148,10 @@ CREATE TABLE IF NOT EXISTS teil (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
     vorlage TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', parameter TEXT NOT NULL DEFAULT '{}',
     werkstoff TEXT NOT NULL DEFAULT '', masse REAL, volumen REAL,""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS baugruppe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', definition TEXT NOT NULL DEFAULT '{}', masse REAL,""" + _GEMEINSAM + """
 );
 CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
@@ -304,8 +309,9 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 4:
-            self._db.executescript(SCHEMA)   # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile)
+        if von < 5:
+            # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen)
+            self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
 
@@ -895,6 +901,75 @@ class Projekt:
     def teil_loeschen(self, id_: int) -> None:
         self.objekt_loeschen("teil", id_)
 
+    def teil_form(self, id_: int) -> dict:
+        """Geometrie eines gespeicherten Teils (aus Vorlage oder Feature-Baum) – wird nicht gespeichert, sondern
+        jedes Mal aus den Parametern erzeugt (E14). Liefert dict(form, masse, werkstoff, nr, name)."""
+        from .cad import modellierer, vorlagen
+        t = self.teil(id_)
+        if t["vorlage"] == "frei":
+            ber, _ = self.ber_funktion()
+            r = modellierer.bauen(t["parameter"]["definition"], ber)
+            if not r.ok:
+                raise ProjektFehler(f"{t['nr']}: {r.fehler}")
+            form = r.form
+        else:
+            v = vorlagen.VORLAGEN.get(t["vorlage"])
+            if v is None:
+                raise ProjektFehler(f"Die Vorlage „{t['vorlage']}“ ist unbekannt.")
+            felder = v.Eingaben.__dataclass_fields__
+            form = v.erzeuge(v.Eingaben(**{k: w for k, w in t["parameter"].items() if k in felder}))
+        return {"form": form, "masse": t["masse"], "werkstoff": t["werkstoff"], "nr": t["nr"], "name": t["name"]}
+
+    # ================================================================ Baugruppen (MS8)
+    def baugruppe_bauen(self, definition: dict):
+        """Baugruppe aus ihrer Definition zusammensetzen (Geometrie, Masse, Schwerpunkt, Stückliste)."""
+        from .cad import baugruppe
+        ber, _ = self.ber_funktion()
+        cache: dict = {}
+
+        def quelle(teil_id):
+            if teil_id not in cache:
+                try:
+                    cache[teil_id] = self.teil_form(int(teil_id))
+                except ProjektFehler as exc:
+                    raise baugruppe.GeometrieFehler(str(exc)) from exc
+            return cache[teil_id]
+        return baugruppe.bauen(definition, quelle, ber)
+
+    def baugruppe_speichern(self, name: str, definition: dict, masse: float | None = None,
+                            baugruppe_id: int | None = None) -> dict:
+        """Neue Baugruppe anlegen oder als neue Version speichern. Die eingebauten Teile werden verknüpft:
+        ändert sich ein Teil, wird die Baugruppe „neu prüfen“."""
+        daten = json.dumps(definition, ensure_ascii=False)
+        if baugruppe_id is None:
+            gid = self.objekt_neu("baugruppe", name=name, definition=daten, masse=masse)["id"]
+        else:
+            alt = self.baugruppe(baugruppe_id)
+            self._db.execute("UPDATE baugruppe SET name=?, definition=?, masse=?, version=version+1, "
+                             "status='Entwurf', geaendert=? WHERE id=?", (name, daten, masse, _jetzt(), baugruppe_id))
+            self._protokollieren("baugruppe", baugruppe_id, f"Version {alt['version'] + 1}: gespeichert")
+            self._db.execute("DELETE FROM verknuepfung WHERE ziel_typ='baugruppe' AND ziel_id=?", (baugruppe_id,))
+            self._wirkung_markieren("baugruppe", baugruppe_id, f"{alt['nr']} geändert")
+            gid = baugruppe_id
+        for tid in sorted({int(e["teil_id"]) for e in definition.get("einbauten", []) if e.get("art") == "teil"}):
+            self.verknuepfen("teil", tid, "baugruppe", gid, "Einbau")
+        self._db.commit()
+        return self.baugruppe(gid)
+
+    def baugruppe(self, id_: int) -> dict:
+        g = self.objekt("baugruppe", id_)
+        g["definition"] = json.loads(g["definition"])
+        return g
+
+    def baugruppen(self) -> list[dict]:
+        liste = self.liste("baugruppe")
+        for g in liste:
+            g["definition"] = json.loads(g["definition"])
+        return liste
+
+    def baugruppe_loeschen(self, id_: int) -> None:
+        self.objekt_loeschen("baugruppe", id_)
+
     # ================================================================ Allgemeine Objekte (MS3)
     _FELDER = {
         "idee": {"titel", "problem", "nutzen", "beschreibung", "ier", "ressourcen", "bild"},
@@ -903,6 +978,7 @@ class Projekt:
         "funktion": {"eltern_id", "name", "beschreibung", "reihenfolge"},
         "variante": {"name", "beschreibung"},
         "teil": {"vorlage", "name", "parameter", "werkstoff", "masse", "volumen"},
+        "baugruppe": {"name", "definition", "masse"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",

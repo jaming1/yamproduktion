@@ -313,3 +313,33 @@ def lastenheft_erstellen(projekt, ziel: str | Path) -> Path:
                             title=f"Produkt-Lastenheft – {p.produkt or p.name}", author="YamProduktion")
     doc.build(inhalt)
     return ziel
+
+
+def stueckliste_erstellen(ergebnis, ziel: str | Path, name: str, nr: str = "", projekt: str = "") -> Path:
+    """Stückliste einer Baugruppe als PDF (Lastenheft M32): Positionen, Massen, Schwerpunkt, Hinweise."""
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [P(f"Stückliste {_x(nr)} {_x(name)}", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M}", "klein"),
+              Spacer(1, 6)]
+    daten = [["Pos", "Menge", "Benennung", "Sachnummer / Norm", "Werkstoff", "Einzel kg", "Gesamt kg"]]
+    for p in ergebnis.stueckliste:
+        daten.append([str(p.pos), str(p.menge), P(_x(p.benennung)), P(_x(p.sachnummer)), P(_x(p.werkstoff)),
+                      formatiere(p.einzelmasse) if p.einzelmasse is not None else "–",
+                      formatiere(p.gesamtmasse) if p.gesamtmasse is not None else "–"])
+    inhalt.append(tabelle(daten, [10 * mm, 13 * mm, 42 * mm, 38 * mm, 31 * mm, 18 * mm, 18 * mm]))
+    sx, sy, sz = ergebnis.schwerpunkt
+    inhalt += [Spacer(1, 8),
+               P(f"<b>Gesamtmasse {formatiere(ergebnis.masse)} kg</b> &nbsp;·&nbsp; Schwerpunkt "
+                 f"x = {formatiere(sx)}, y = {formatiere(sy)}, z = {formatiere(sz)} mm")]
+    if ergebnis.ohne_masse:
+        inhalt.append(P("Ohne Masse (nicht in der Summe): " + _x(", ".join(ergebnis.ohne_masse)), "klein"))
+    if any(p.art == "Normteil" for p in ergebnis.stueckliste):
+        inhalt.append(P("Normteile: Maße aus dem Tabellenbuch, nicht geprüft – vor der Bestellung mit dem Katalog "
+                        "abgleichen. Lagermassen genähert.", "klein"))
+    doc = SimpleDocTemplate(str(ziel), pagesize=A4, leftMargin=20 * mm, rightMargin=20 * mm,
+                            topMargin=18 * mm, bottomMargin=18 * mm, title=f"Stückliste {name}",
+                            author="YamProduktion")
+    doc.build(inhalt)
+    return ziel

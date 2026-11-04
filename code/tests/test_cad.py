@@ -171,4 +171,4 @@ def test_alte_projektdatei_bekommt_bauteile(tmp_path):
     p.schliessen()
     p = Projekt.oeffnen(tmp_path / "Alt.yamp", sicherung=False)
     assert p.teile() == []
-    assert p.meta("schema_version") == "4"
+    assert p.meta("schema_version") == "5"
