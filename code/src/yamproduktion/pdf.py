@@ -523,3 +523,140 @@ def montageanleitung_erstellen(baugruppe: dict, plan: dict, bilder: dict, stueck
     inhalt.append(tabelle([["Montiert von", "Geprüft von", "Datum"], ["", "", ""]], [60 * mm, 60 * mm, 47 * mm]))
     inhalt += [Spacer(1, 6), P(_x(HINWEIS), "klein")]
     return _dokument(ziel, f"Montageanleitung {baugruppe['nr']}", inhalt)
+
+
+def _datum(text: str) -> str:
+    from .betrieb.wartung import anzeigen, lesen
+    return anzeigen(lesen(text)) or text
+
+
+def _kopf_betrieb(s, titel_: str, nr: str, projekt: str, zusatz: str = "") -> list:
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    return [P(f"{_x(titel_)} {_x(nr)}", "h1"),
+            P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M}"
+              + (f" &nbsp;·&nbsp; {zusatz}" if zusatz else ""), "klein")]
+
+
+def abnahmeprotokoll_erstellen(ib: dict, ziel: str | Path, projekt: str = "") -> Path:
+    """Inbetriebnahme- und Abnahmeprotokoll (Lastenheft M41, M42): alle Prüfpunkte mit Soll, Ist, Ergebnis."""
+    from .betrieb import inbetriebnahme as IB
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    d = ib["daten"]
+    a = IB.auswerten(d)
+    inhalt = _kopf_betrieb(s, "Inbetriebnahme- und Abnahmeprotokoll", ib["nr"], projekt,
+                           f"Datum der Prüfung: {_x(_datum(d.get('datum', '')))} &nbsp;·&nbsp; Ort: {_x(d.get('ort', '') or '–')}"
+                           f" &nbsp;·&nbsp; Prüfer: {_x(d.get('pruefer', '') or '–')}")
+    urteil = ("<b>Abgenommen</b> – alle Prüfpunkte in Ordnung." if a["abgenommen"] else
+              f"<b>Nicht abgenommen</b> – {a['nio']} nicht in Ordnung, {a['offen']} offen.")
+    inhalt.append(P(f"{urteil} &nbsp; ({a['io']} von {a['gesamt']} Punkten i. O.)"))
+    farbe = {IB.IO: colors.HexColor("#E3F2E1"), IB.NIO: colors.HexColor("#FBE3E1")}
+    for gruppe in IB.GRUPPEN:
+        punkte = [p for p in d.get("punkte", []) if p["gruppe"] == gruppe]
+        if not punkte:
+            continue
+        inhalt.append(P(gruppe, "h2"))
+        daten = [["Nr", "Prüfpunkt", "Soll", "Ist", "Ergebnis", "Quelle"]]
+        stil = []
+        for i, p in enumerate(punkte, 1):
+            erg = IB.ergebnis(p)
+            text = _x(p["text"]) + (f"<br/><font size=7.5>{_x(p['bemerkung'])}</font>" if p.get("bemerkung") else "")
+            daten.append([p["id"], P(text), P(_x(IB.soll_text(p))), P(_x(p.get("ist", ""))), erg,
+                          P(f"<font size=7.5>{_x(p.get('quelle', ''))}</font>")])
+            if erg in farbe:
+                stil.append(("BACKGROUND", (4, i), (4, i), farbe[erg]))
+        t = tabelle(daten, [11 * mm, 66 * mm, 30 * mm, 22 * mm, 17 * mm, 28 * mm])
+        t.setStyle(TableStyle(stil))
+        inhalt.append(t)
+    mp = a["messpunkte"]
+    if mp:
+        inhalt.append(P(f"Leistungskurve: {len(mp)} Messpunkte, Einzelheiten im Messprotokoll.", "klein"))
+    inhalt.append(P("Unterschriften", "h2"))
+    inhalt.append(tabelle([["Prüfer", "Betreiber", "Datum"], ["\n\n", "", ""]], [62 * mm, 62 * mm, 50 * mm]))
+    inhalt += [Spacer(1, 6), P(_x(IB.HINWEIS), "klein")]
+    return _dokument(ziel, f"Abnahmeprotokoll {ib['nr']}", inhalt)
+
+
+def messprotokoll_erstellen(ib: dict, ziel: str | Path, projekt: str = "") -> Path:
+    """Messprotokoll Leistungskurve (M42): Messpunkte gegen die berechnete Kurve mit Diagramm."""
+    from reportlab.graphics.charts.lineplots import LinePlot
+    from reportlab.graphics.shapes import Drawing, String
+    from reportlab.graphics.widgets.markers import makeMarker
+    from .betrieb import inbetriebnahme as IB
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    d = ib["daten"]
+    mp = IB.messung_auswerten(d)
+    kurve = d.get("soll_kurve") or {}
+    inhalt = _kopf_betrieb(s, "Messprotokoll Leistungskurve", ib["nr"], projekt,
+                           f"Messung am {_x(_datum(d.get('datum', '')))} &nbsp;·&nbsp; Sollkurve aus "
+                           f"{_x(kurve.get('quelle', '–'))}")
+    normal, _ = _schrift()
+    z = Drawing(170 * mm, 85 * mm)
+    plot = LinePlot()
+    plot.x, plot.y, plot.width, plot.height = 14 * mm, 12 * mm, 150 * mm, 64 * mm
+    reihen = []
+    if kurve.get("x"):
+        reihen.append(list(zip(kurve["x"], kurve["y"])))
+    if mp:
+        reihen.append([(m.v, m.p) for m in mp])
+    if reihen:
+        plot.data = reihen
+        plot.lines[0].strokeColor = colors.HexColor("#1F6FB5")
+        plot.lines[0].strokeWidth = 1.4
+        if len(reihen) > 1:
+            plot.lines[1].strokeColor = colors.HexColor("#D9822B")
+            plot.lines[1].strokeWidth = 0
+            plot.lines[1].symbol = makeMarker("FilledCircle", size=5, fillColor=colors.HexColor("#D9822B"))
+        for achse in (plot.xValueAxis, plot.yValueAxis):
+            achse.labels.fontName = normal
+            achse.labels.fontSize = 7
+        plot.xValueAxis.valueMin = 0
+        plot.yValueAxis.valueMin = 0
+        z.add(plot)
+    z.add(String(14 * mm, 80 * mm, "Leistung P in kW über Wind v in m/s – Linie: Rechnung, Punkte: Messung",
+                 fontName=normal, fontSize=9))
+    inhalt.append(z)
+    daten = [["v in m/s", "P gemessen kW", "P Rechnung kW", "Abweichung", "Ergebnis"]]
+    for m in mp:
+        daten.append([formatiere(m.v), formatiere(m.p), "–" if m.soll is None else formatiere(m.soll),
+                      "–" if m.abweichung is None else f"{formatiere(m.abweichung * 100, 3)} %",
+                      "–" if m.ok is None else (IB.IO if m.ok else IB.NIO)])
+    inhalt.append(tabelle(daten, [26 * mm, 32 * mm, 32 * mm, 28 * mm, 24 * mm]))
+    inhalt += [Spacer(1, 6), P(f"Toleranz ±{formatiere(IB.TOLERANZ_KURVE * 100)} % (Richtwert). Vereinfachte Messung "
+                               "(Mittelwerte je Windklasse); eine normgerechte Messung nach IEC 61400-12-1 braucht "
+                               "einen Messmast und längere Messdauer.", "klein")]
+    return _dokument(ziel, f"Messprotokoll {ib['nr']}", inhalt)
+
+
+def wartungsplan_erstellen(wp: dict, ziel: str | Path, projekt: str = "", heute=None) -> Path:
+    """Wartungsplan (S13) mit Intervallen, Verschleißteilen und nächster Fälligkeit."""
+    from datetime import date
+    from .betrieb import wartung as W
+    ziel = Path(ziel)
+    heute = heute or date.today()
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    d = wp["daten"]
+    inhalt = _kopf_betrieb(s, "Wartungsplan", wp["nr"], projekt,
+                           f"Inbetriebnahme: {_x(W.anzeigen(W.lesen(d.get('start', ''))) or '–')}")
+    daten = [["Bauteil", "Tätigkeit", "Intervall", "zuletzt", "fällig", "V"]]
+    stil = []
+    for i, p in enumerate(d.get("punkte", []), 1):
+        f_ = W.faellig(p, d.get("start", ""))
+        intervall = f"{p['intervall']} Mon." + (f" (erstes: {p['erstes']})" if p.get("erstes") else "")
+        daten.append([P(_x(p["bauteil"])), P(_x(p["taetigkeit"]) + f"<br/><font size=7.5>{_x(p.get('quelle', ''))}"
+                                              "</font>"),
+                      P(intervall), W.anzeigen(W.lesen(p.get("zuletzt", ""))), W.anzeigen(f_),
+                      "●" if p.get("verschleiss") else ""])
+        if f_ and f_ <= heute:
+            stil.append(("BACKGROUND", (4, i), (4, i), colors.HexColor("#FBE3E1")))
+    t = tabelle(daten, [32 * mm, 64 * mm, 21 * mm, 23 * mm, 23 * mm, 9 * mm])
+    t.setStyle(TableStyle(stil))
+    inhalt.append(t)
+    vt = W.verschleissteile(d)
+    inhalt.append(P("● = Verschleißteil. Verschleißteile: " + ", ".join(_x(p["bauteil"]) for p in vt), "klein"))
+    inhalt += [Spacer(1, 6), P(_x(W.HINWEIS), "klein")]
+    return _dokument(ziel, f"Wartungsplan {wp['nr']}", inhalt)

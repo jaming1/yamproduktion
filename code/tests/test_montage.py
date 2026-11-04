@@ -121,5 +121,5 @@ def test_montageplan_gondel(tmp_path):
     pfad = p.pfad
     p.schliessen()
     p2 = Projekt.oeffnen(pfad)
-    assert p2.meta("schema_version") == "7"
+    assert p2.meta("schema_version") == "8"
     p2.schliessen()

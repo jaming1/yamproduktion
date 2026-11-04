@@ -115,3 +115,11 @@
 - Montagepläne M-001 … verknüpft mit Baugruppe und Vorrichtung (Änderung → „neu prüfen“); Dateiformat Version 7
 - 129 automatische Tests (4 neu) und Screenshots hell/dunkel
 
+## 04.11.2026 – MS11 Inbetriebnahme & Betrieb ✅ (Version 0.11.0)
+- Neue Seite **Inbetriebnahme**: Checkliste aus der Vorlage Kleinwindanlage mit 20 Prüfpunkten (mechanisch, elektrisch, Sicherheitsfunktionen, Messungen); Sollwerte aus Rotor-, Ertrags-, Brems-, Schrauben-Berechnung und Montageplänen mit Quelle; Ist-Werte mit sofortiger Bewertung (i. O. / n. i. O. / offen); eigene Prüfpunkte
+- **Leistungskurve messen**: Messpunkte gegen die berechnete Kurve, Abweichung und Diagramm; **Messprotokoll** und **Abnahmeprotokoll** als PDF mit Unterschriftenfeld
+- Neue Seite **Wartung**: Wartungsplan mit Intervallen, erstem Intervall, Verschleißteilen und Fälligkeit; Lagertausch aus L10h und Betriebsstunden; als PDF
+- **Rückmeldung**: Mängel und Erfahrungen werden Ideen in Phase P1 für die nächste Version
+- IB-001 … und WP-001 … verknüpft mit ihren Quellen (Änderung → „neu prüfen“); Dateiformat Version 8
+- 136 automatische Tests (7 neu) und Screenshots hell/dunkel
+

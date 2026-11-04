@@ -72,3 +72,10 @@
 - **Erkenntnis Darstellung:** Bilder für ein PDF immer mit hellem Hintergrund rendern, egal welches Thema die Oberfläche gerade hat.
 - **Für den Skill:** Nachträgliche Optionen (hier: Vorrichtung) müssen alle Stellen anpassen, die von ihnen abhängen (Schritt einfügen, Text „Prismen“ → „Auflagen“), statt nur einen Schalter zu setzen.
 
+## MS11 (04.11.2026)
+- **Gut:** Jeder Sollwert der Checkliste trägt seine Quelle (B-00x, M-00x oder „Richtwert“) – im Protokoll sieht man sofort, was gerechnet und was geschätzt ist.
+- **Erkenntnis Fachlich:** Die Lagerlebensdauer aus der Vorlage ist sehr groß (Lager A ≈ 8 000 Jahre). Ein Tauschintervall daraus wäre unsinnig; über der Auslegungslebensdauer wird daher „Zustand prüfen, Tausch bei Befund“ geplant.
+- **Erkenntnis:** Einheiten aus Berechnungen kommen gemischt (%, –, N*m). Vor der Anzeige vereinheitlichen (% → Anteil, * → ·).
+- **Erkenntnis Darstellung:** Breite Tabellen mit festen Spaltenbreiten und einer dehnbaren Textspalte planen, sonst läuft die Seite seitlich über; volle Texte als Tooltip.
+- **Für den Skill:** Datumsangaben in Oberfläche und PDF immer deutsch (TT.MM.JJJJ), intern ISO speichern.
+

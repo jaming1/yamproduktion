@@ -18,6 +18,7 @@ from .berechnungen_seite import BerechnungenSeite
 from .cad_seite import BauteilSeite
 from .arbeitsplan_seite import ArbeitsplanSeite
 from .montage_seite import MontageSeite
+from .betrieb_seiten import InbetriebnahmeSeite, WartungSeite
 from .baugruppen_seite import BaugruppenSeite
 from .modellier_seite import ModellierSeite
 from .kosten_seite import KostenSeite
@@ -60,6 +61,9 @@ NAVIGATION = [
     ("   Kosten & Anfragen", "kosten"),
     ("MONTAGE", None),
     ("   Montagepläne", "montage"),
+    ("BETRIEB", None),
+    ("   Inbetriebnahme", "inbetriebnahme"),
+    ("   Wartung", "wartung"),
     ("Werkstoffe", "werkstoffe"),
 ]
 RECHENSEITEN = {"rotor": "rotorauslegung", "ertrag": "ertrag", "lasten": "lasten_iec", "antrieb": "antrieb",
@@ -89,6 +93,8 @@ class Hauptfenster(QMainWindow):
         self.arbeitsplaene = ArbeitsplanSeite()
         self.kosten = KostenSeite()
         self.montage = MontageSeite()
+        self.inbetriebnahme = InbetriebnahmeSeite()
+        self.wartung = WartungSeite()
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -101,6 +107,7 @@ class Hauptfenster(QMainWindow):
                        "bauteile": self.bauteile, "modellieren": self.modellieren,
                        "baugruppen": self.baugruppen, "zeichnungen": self.zeichnungen,
                        "arbeitsplaene": self.arbeitsplaene, "kosten": self.kosten, "montage": self.montage,
+                       "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        **self.rechenseiten}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
@@ -191,6 +198,8 @@ class Hauptfenster(QMainWindow):
         self.baugruppen.zeichnung_oeffnen.connect(self.zeichnung_oeffnen)
         self.arbeitsplaene.gespeichert.connect(self.uebersicht.aktualisieren)
         self.montage.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.inbetriebnahme.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.wartung.gespeichert.connect(self.uebersicht.aktualisieren)
         self.kosten.arbeitsplan_oeffnen.connect(self.arbeitsplan_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.berechnungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
@@ -203,7 +212,8 @@ class Hauptfenster(QMainWindow):
     def _arbeitsseiten(self):
         return (self.uebersicht, self.ideen, self.anforderungen, self.funktionen, self.konzept,
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
-                self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage)
+                self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
+                self.inbetriebnahme, self.wartung)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -297,7 +307,7 @@ class Hauptfenster(QMainWindow):
             self.bauteile.laden()
         elif schluessel == "modellieren":
             self.modellieren.laden()
-        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage"):
+        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung"):
             self.seiten[schluessel].laden()
         elif schluessel in RECHENSEITEN and self.projekt:
             self.seiten[schluessel]._verknuepfung_zeigen()
@@ -326,6 +336,10 @@ class Hauptfenster(QMainWindow):
             self.konzept.auswaehlen_objekt(typ, id_)
         elif typ == "arbeitsplan":
             self.arbeitsplan_oeffnen(self.projekt.arbeitsplan(id_)["teil_id"])
+        elif typ in ("inbetriebnahme", "wartungsplan"):
+            seite = self.inbetriebnahme if typ == "inbetriebnahme" else self.wartung
+            self.gehe_zu("inbetriebnahme" if typ == "inbetriebnahme" else "wartung")
+            seite.laden_id(id_)
         elif typ == "montageplan":
             self.gehe_zu("montage")
             self.montage.baugruppe_laden(self.projekt.montageplan(id_)["baugruppe_id"])

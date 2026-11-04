@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -47,6 +47,8 @@ OBJEKTE = {
     "baugruppe":    ("G", "name", "P5", "Baugruppe"),
     "arbeitsplan":  ("AP", "name", "P6", "Arbeitsplan"),
     "montageplan":  ("M", "name", "P7", "Montageplan"),
+    "inbetriebnahme": ("IB", "name", "P8", "Inbetriebnahme"),
+    "wartungsplan": ("WP", "name", "P9", "Wartungsplan"),
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -161,6 +163,14 @@ CREATE TABLE IF NOT EXISTS arbeitsplan (
 );
 CREATE TABLE IF NOT EXISTS montageplan (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, baugruppe_id INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS inbetriebnahme (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS wartungsplan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
 );
 CREATE TABLE IF NOT EXISTS bewertung (
@@ -319,9 +329,9 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 7:
+        if von < 8:
             # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
-            # 7: Montagepläne)
+            # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -1070,6 +1080,114 @@ class Projekt:
     def montageplatten(self) -> list[dict]:
         return [t for t in self.teile() if t["vorlage"] == "montageplatte"]
 
+    # ================================================================ Inbetriebnahme & Betrieb (MS11)
+    _BETRIEB_WERTE = (("rotorauslegung", "n"), ("rotorauslegung", "P_el"), ("bremse", "t_Br"),
+                      ("ertrag", "v_ein"), ("ertrag", "v_ab"), ("ertrag", "t_unter"), ("ertrag", "V"),
+                      ("lager", "L10h,A"), ("lager", "L10h,B"), ("schrauben", "M_A"))
+
+    def betrieb_grundlagen(self):
+        """Sollwerte für Inbetriebnahme und Wartung aus den neuesten Berechnungen und den Montageplänen."""
+        from .berechnungen import wert_aus_ergebnis
+        from .betrieb.inbetriebnahme import Grundlagen, Wert
+        g = Grundlagen()
+        neueste: dict = {}
+        for b in self.berechnungen():                       # neueste zuerst
+            neueste.setdefault(b.typ, b)
+        for typ, sym in self._BETRIEB_WERTE:
+            b = neueste.get(typ)
+            treffer = wert_aus_ergebnis(b.ergebnis, sym) if b else None
+            if treffer:
+                wert, einheit = treffer
+                if einheit == "%":
+                    wert, einheit = wert / 100, "–"
+                g.werte[sym] = Wert(float(wert), einheit, b.nr, ("berechnung", b.id))
+        # Fallback aus den Anforderungen (Vorlage Kleinwindanlage)
+        for a in self.anforderungen():
+            for sym, wort in (("v_ein", "Einschaltwind"), ("v_ab", "Abschaltwind"), ("P_el", "Nennleistung")):
+                if sym not in g.werte and wort.lower() in a.text.lower() and a.zielwert is not None:
+                    g.werte[sym] = Wert(float(a.zielwert), a.einheit, a.nr, ("anforderung", a.id))
+        for mp in self.montageplaene():
+            for st in mp["daten"].get("schritte", []):
+                for m in st.get("momente", []):
+                    if m.get("wert") not in (None, ""):
+                        g.momente.append((m["was"], float(m["wert"]), mp["nr"], ("montageplan", mp["id"])))
+        b = neueste.get("ertrag")
+        if b and b.ergebnis.get("diagramm"):
+            d = b.ergebnis["diagramm"]
+            g.kurve = {"x": d["x"], "y": d["y"], "quelle": b.nr}
+        return g
+
+    def _betrieb_verknuepfen(self, typ: str, id_: int, refs) -> None:
+        self._db.execute("DELETE FROM verknuepfung WHERE ziel_typ=? AND ziel_id=?", (typ, id_))
+        for r in {tuple(r) for r in refs if r}:
+            try:
+                self.verknuepfen(r[0], int(r[1]), typ, id_, "Sollwert")
+            except ProjektFehler:
+                pass
+
+    def _betrieb_speichern(self, typ: str, id_: int, daten: dict, name: str | None = None) -> None:
+        alt = self.objekt(typ, id_)
+        self._db.execute(f"UPDATE {typ} SET name=?, daten=?, version=version+1, status='Entwurf', geaendert=? "
+                         "WHERE id=?", (name or alt["name"], json.dumps(daten, ensure_ascii=False), _jetzt(), id_))
+        self._protokollieren(typ, id_, f"Version {alt['version'] + 1}: gespeichert")
+        self._phase_in_arbeit(PHASE_VON_TYP[typ], f"{alt['nr']} geändert")
+
+    def _betrieb_laden(self, typ: str, id_: int) -> dict:
+        o = self.objekt(typ, id_)
+        o["daten"] = json.loads(o["daten"])
+        return o
+
+    def inbetriebnahme_neu(self, name: str = "Inbetriebnahme", datum: str = "") -> dict:
+        """Checkliste aus der Vorlage „Kleinwindanlage“ mit Sollwerten aus dem Projekt anlegen."""
+        from .betrieb import inbetriebnahme as IB
+        daten = IB.vorlage_kwa(self.betrieb_grundlagen(), datum or datetime.now().date().isoformat())
+        iid = self.objekt_neu("inbetriebnahme", name=name, daten=json.dumps(daten, ensure_ascii=False))["id"]
+        self._betrieb_verknuepfen("inbetriebnahme", iid, [p.get("ref") for p in daten["punkte"]])
+        self._db.commit()
+        return self.inbetriebnahme(iid)
+
+    def inbetriebnahme(self, id_: int) -> dict:
+        return self._betrieb_laden("inbetriebnahme", id_)
+
+    def inbetriebnahmen(self) -> list[dict]:
+        return [self.inbetriebnahme(o["id"]) for o in self.liste("inbetriebnahme")]
+
+    def inbetriebnahme_speichern(self, id_: int, daten: dict, name: str | None = None) -> dict:
+        self._betrieb_speichern("inbetriebnahme", id_, daten, name)
+        self._betrieb_verknuepfen("inbetriebnahme", id_, [p.get("ref") for p in daten.get("punkte", [])])
+        self._db.commit()
+        return self.inbetriebnahme(id_)
+
+    def wartungsplan_neu(self, name: str = "Wartungsplan", start: str = "") -> dict:
+        from .betrieb import wartung as W
+        g = self.betrieb_grundlagen()
+        mit_getriebe = any(b.typ == "getriebe" for b in self.berechnungen())
+        daten = W.vorlage_kwa(g.werte, start or datetime.now().date().isoformat(), mit_getriebe)
+        wid = self.objekt_neu("wartungsplan", name=name, daten=json.dumps(daten, ensure_ascii=False))["id"]
+        refs = [g.werte[s].ref for s in ("L10h,A", "L10h,B", "t_unter") if s in g.werte]
+        self._betrieb_verknuepfen("wartungsplan", wid, refs)
+        self._db.commit()
+        return self.wartungsplan(wid)
+
+    def wartungsplan(self, id_: int) -> dict:
+        return self._betrieb_laden("wartungsplan", id_)
+
+    def wartungsplaene(self) -> list[dict]:
+        return [self.wartungsplan(o["id"]) for o in self.liste("wartungsplan")]
+
+    def wartungsplan_speichern(self, id_: int, daten: dict) -> dict:
+        self._betrieb_speichern("wartungsplan", id_, daten)
+        self._db.commit()
+        return self.wartungsplan(id_)
+
+    def rueckmeldung(self, titel_: str, problem: str = "", herkunft: str = "") -> dict:
+        """Erfahrung oder Mangel aus Inbetriebnahme/Betrieb als Idee für die nächste Version (Lastenheft S14)."""
+        if not titel_.strip():
+            raise ProjektFehler("Bitte kurz beschreiben, was verbessert werden soll.")
+        return self.objekt_neu("idee", titel=titel_.strip()[:120], problem=problem,
+                               beschreibung=f"Rückmeldung aus dem Betrieb{': ' + herkunft if herkunft else ''}. "
+                                            "Für die nächste Version prüfen.")
+
     # ================================================================ Fertigung & Kosten (MS9)
     def kostensaetze(self) -> dict:
         """Stundensätze, Materialpreise (€/kg) und Zukaufpreise (€/Stück) des Projekts – Vorgabe: Schätzwerte."""
@@ -1179,6 +1297,8 @@ class Projekt:
         "baugruppe": {"name", "definition", "masse"},
         "arbeitsplan": {"teil_id", "name", "daten", "kosten"},
         "montageplan": {"baugruppe_id", "name", "daten"},
+        "inbetriebnahme": {"name", "daten"},
+        "wartungsplan": {"name", "daten"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
