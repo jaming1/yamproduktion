@@ -2,7 +2,7 @@
 
 Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen, Berechnung, eigene CAD-Konstruktion, Fertigung und Montage bis zur Inbetriebnahme führt. Erstes Produkt: eine Mini-Windkraftanlage (5–10 kW).
 
-**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS15 fertig, dazu Yamaktaba-Anbindung (Version 0.16.0 – Version 1.0.0 nach deiner Bestätigung der Kriterien 10 und 11). Plan: `docs/03_PLAN.md`.
+**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS15 fertig, dazu Yamaktaba-Anbindung und die Kann-Anforderungen K1–K5 (Version 0.17.0 – Version 1.0.0 nach deiner Bestätigung der Kriterien 10 und 11). Plan: `docs/03_PLAN.md`.
 
 ## Starten (Mac)
 
@@ -22,6 +22,7 @@ Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen,
 5. **Phasen freigeben** in der Übersicht: geht nur, wenn nichts mehr offen ist (Tooltip auf dem Knopf zeigt, was fehlt). Ändert sich später etwas, öffnet sich das Phasentor automatisch wieder.
 6. **Sicherung**: Beim Öffnen wird automatisch eine Kopie angelegt (die letzten 10 bleiben) – Ablage › „Sicherungen im Finder zeigen“. Eine Sicherung öffnet man wie ein normales Projekt.
 7. **Ideen & TRIZ**: Idee mit Problem, Nutzen, idealem Endergebnis und Ressourcen festhalten. Unter „Widerspruch lösen“ beschreiben, was besser werden soll und was sich dabei verschlechtert – die Widerspruchsmatrix zeigt die passenden Erfinderprinzipien. Lösungsidee ins Feld schreiben und beim Prinzip auf **Notieren**. Für „muss groß und klein zugleich sein“ die Art „Physikalischer Widerspruch“ wählen (Trennungsprinzipien).
+7a. **Kreativmethoden** (unter „Ideen & TRIZ“): „+ Neue Sitzung“ und eine Methode wählen – **Brainstorming-Board** (Zettel sammeln, verschieben, nach Gruppen ordnen, mit Punkten bewerten), **Methode 6-3-5** (Formular je Blatt mit Rundenuhr; wer wann schreibt, zeigt das Programm) oder **Mindmap** (Äste und Zweige um die Leitfrage, als Text kopierbar). Einen Beitrag auswählen und **Als Idee übernehmen** oder als **Lösungsweg** einer Teilfunktion in den morphologischen Kasten.
 8. **Funktionen**: Gesamtfunktion und Teilfunktionen als Baum (Doppelklick zum Umbenennen), Anforderungen den Funktionen zuordnen.
 9. **Konzept**: je Teilfunktion Lösungswege sammeln (auch TRIZ-Ideen übernehmen), Varianten anlegen und im morphologischen Kasten zusammenstellen. Darunter Kriterien mit Gewicht und Punkte 0–10 vergeben; der Nutzwert wird sofort gerechnet, der beste markiert. Eine Variante **mit Begründung** auswählen.
 10. **Produkt-Lastenheft (PDF)**: Knopf in der Übersicht – Ideen, Anforderungen nach Priorität, Eigenschaften, Funktionsstruktur, TRIZ und Konzept in einem Dokument.

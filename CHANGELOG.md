@@ -165,7 +165,8 @@
 - Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
 - 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel
 
-## Unveröffentlicht
+## 05.11.2026 – Kann-Anforderungen K2–K5 ✅ (Version 0.17.0)
+Parallel in vier Strängen entwickelt und zusammengeführt. Projektdatei-Schema 14 (ältere Projekte werden beim Öffnen ergänzt).
 
 ### K3 Rotorblatt nach Blattelementmethode
 - Neue Berechnung **Rotorblatt (BEM)** unter Windkraft: Blatttiefe und Verwindung je Blattelement nach Schmitz, danach Nachrechnung mit der Blattelementmethode (Prandtl-Spitzenverlust, Profilwiderstand, Korrektur nach Buhl für hoch belastete Ringe, sichere Lösung nach Ning)
@@ -194,3 +195,12 @@
   - NC-Programme werden je Bauteil mit Version gespeichert (NC-001 …) und als `.nc`-Dateien exportiert; ändert sich das Bauteil, steht das Programm auf „neu prüfen“
   - Projektdatei-Schema 14 (neue Tabelle `ncprogramm`, ältere Projekte werden beim Öffnen ergänzt)
   - Hinweis: G-Code ist ungeprüft und muss vor dem Einsatz im Simulator der Steuerung getestet werden
+
+### K2 Kreativmethoden
+- Neue Seite unter „Ideen & TRIZ“ mit Sitzungen (KS-…) zu einer Leitfrage
+  - **Brainstorming-Board**: Zettel frei verschieben, Gruppen mit eigener Farbe, Klebepunkte, „Beste Ideen“, Regeln und Zeitgeber
+  - **Methode 6-3-5**: Formular je Blatt (2–8 Personen, Runden × 3 Ideen), zeigt wer gerade auf welches Blatt schreibt, Fortschritt und Rundenuhr 5:00
+  - **Mindmap**: Gliederung links, grafische Mindmap rechts (radial, Farbe je Ast), Umhängen per Ziehen, als Text kopierbar
+  - Beitrag mit einem Klick **als Idee** übernehmen (mit Herkunft und Rückverfolgung) oder **als Lösungsweg** in den morphologischen Kasten
+- Projektdatei Schema 11 (neue Tabellen `kreativ`, `kreativ_eintrag`); ältere Projekte werden beim Öffnen ohne Datenverlust umgestellt
+- 10 neue automatische Tests und Screenshots hell/dunkel (100–106)

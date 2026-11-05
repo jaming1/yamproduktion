@@ -73,7 +73,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 |----|-------------|----------|---------------|--------|-------|
 | MS15 | **Abnahme mit der echten Windkraftanlage** | Alle 11 Abnahmekriterien aus dem Lastenheft (Abschnitt 6) sind erfüllt. Vorlage „Kleinwindanlage“ fertig, Projekt-Export, README. | S1, K1, Abnahme 1–11 | ✅ Software (ganzer Ablauf im Test bis „11 von 11“). Kriterium 10 (Buchsuche mit den echten Büchern aus Ashamila) und 11 (Lauf auf Yamines Mac) bestätigt Yamine in der App – danach Version 1.0.0 | 05.11.2026 |
 
-**Kann-Anforderungen** (K2 Kreativmethoden, K3 Blattelementmethode, K5 CAM-Export) kommen nach MS15 oder werden eingeschoben, wenn Zeit bleibt.
+**Kann-Anforderungen:** alle fünf ✅ in Version 0.17.0 (K1 Export in MS15; K2 Kreativmethoden, K3 Blattelementmethode, K4 Kollision/Schwerpunkt, K5 CAM-Export parallel entwickelt, 05.11.2026).
 
 - **K4 Kollisionsprüfung, Masse und Schwerpunkt:** ✅ 05.11.2026 – Seite „Kollision & Schwerpunkt“ mit Ausnahmen, Trägheit und Prüfbericht (E41).
 - **K5 CAM-Export** ✅ (05.11.2026, unveröffentlicht): G-Code für Drehen (zwei Aufspannungen), Passfedernuten, Bohrbilder und Plattenkonturen mit Prüfung und Vorschau – siehe E42. Grenzen: keine Einstiche, Gewinde, Verzahnungen und Freiformkonturen.
@@ -84,7 +84,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 
 - **Bücher scannen** (als PDF, 300 dpi, ein PDF pro Buch, Dateiname = Buchtitel). Bis MS14 liegen sie dann bereit. Bei MS5 nutze ich gern Rechenbeispiele daraus für die Tests.
 - **Bücher (Stand 05.11.2026):** Yamine bereitet die Fachbücher im Projekt **Ashamila** vor. Sobald sie fertig sind, werden Rechenbeispiele und Katalogwerte von dort abgefragt (Ashamila-Werkzeuge: Suche, Seite lesen) statt hier neu gescannt. Seit 0.16.0 ist **Yamaktaba** (die App zu Ashamila) direkt eingebunden: Suche/Lesen und Archiv für Projekte (E38).
-- **Parallel (05.11.2026):** K2, K3, K4 und K5 werden in eigenen Threads auf den Branches `k2-kreativ`, `k3-bem`, `k4-kollision`, `k5-cam` entwickelt und per PR zusammengeführt.
+- **Parallel (05.11.2026):** K2, K3, K4 und K5 wurden parallel in eigenen Strängen entwickelt (PR #1–#4) und zusammengeführt; Schema-Schritte 11, 13, 14 nacheinander.
 - **Eckdaten der Windkraftanlage** sammeln: Standort, mittlere Windgeschwindigkeit, Netz- oder Inselbetrieb, gewünschte Nabenhöhe.
 
 ---

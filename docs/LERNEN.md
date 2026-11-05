@@ -123,3 +123,7 @@
 - **Erkenntnis:** Steuerungen unterscheiden sich schon im Vorschub je Umdrehung (G95 bzw. G99 bei Fanuc-Drehmaschinen) und bei O-Nummern (in LinuxCNC Unterprogramme) – ausgeschriebene G0/G1-Wege sind der kleinste gemeinsame Nenner.
 - **Gut:** Ein zweiter Agent als unabhängiger Prüfer hat zehn echte Fehler gefunden (u. a. Schultern als Kegel gedreht, Querbohrungen als Nut gefräst), die die eigenen Tests sogar festgeschrieben hatten. Bei Maschinencode immer gegen das Volumenmodell prüfen lassen, nicht gegen die eigene Erwartung.
 - **Erkenntnis Fachlich:** Die Lücke zwischen zwei Zylindern ist meist eine Planschulter mit Fase, kein Kegel – Kontur im Modell abtasten statt raten.
+## K2 Kreativmethoden (05.11.2026)
+- **Gut:** Erst Datenmodell und Logik mit festen Schnittstellen, dann die drei Ansichten parallel von drei Agenten bauen lassen – jede in eigener Datei, mit eigenem Screenshot-Prüfskript. Das Zusammensetzen war danach nur noch Verdrahtung.
+- **Erkenntnis:** Bei Zetteln, Feldern und Knoten keine Versionierung je Beitrag – sonst entstehen Hunderte Verlaufseinträge. Versioniert wird die Sitzung, protokolliert die Übernahme.
+- **Erkenntnis Darstellung:** Ein Knopf mit Menü (`setMenu`) bekommt von Qt schon einen Pfeil; ein eigenes „▾“ im Text ergibt zwei Pfeile.

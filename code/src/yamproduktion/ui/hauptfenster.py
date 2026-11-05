@@ -29,6 +29,7 @@ from .kollision_seite import KollisionSeite
 from .modellier_seite import ModellierSeite
 from .kosten_seite import KostenSeite
 from .konzept_seiten import FunktionenSeite, IdeenSeite, KonzeptSeite
+from .kreativ_seite import KreativSeite
 from .rechen_seite import RechenSeite
 from .seiten import AnforderungenSeite, NeuesProjektDialog, UebersichtSeite, WillkommenSeite
 from .werkstoff_seite import WerkstoffSeite
@@ -40,6 +41,7 @@ from .zeichnung_seite import ZeichnungSeite
 NAVIGATION = [
     ("Übersicht", "uebersicht"),
     ("Ideen & TRIZ", "ideen"),
+    ("Kreativmethoden", "kreativ"),
     ("Anforderungen", "anforderungen"),
     ("Funktionen", "funktionen"),
     ("Konzept", "konzept"),
@@ -133,6 +135,7 @@ class Hauptfenster(QMainWindow):
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
         self.konzept = KonzeptSeite()
+        self.kreativ = KreativSeite()
         self.stapel = QStackedWidget()
         self.seiten = {"willkommen": self.willkommen, "uebersicht": self.uebersicht,
                        "anforderungen": self.anforderungen, "berechnungen": self.berechnungen,
@@ -144,7 +147,8 @@ class Hauptfenster(QMainWindow):
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
                        "aufgaben": self.aufgaben, "budget": self.budget,
-                       "bibliothek": self.bibliothek, "abnahme": self.abnahme, **self.rechenseiten}
+                       "bibliothek": self.bibliothek, "abnahme": self.abnahme, **self.rechenseiten,
+                       "kreativ": self.kreativ}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
 
@@ -218,7 +222,7 @@ class Hauptfenster(QMainWindow):
         self.uebersicht.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         for seite in self._arbeitsseiten():
             seite.meldung.connect(self.melden)
-        for seite in (self.ideen, self.funktionen, self.konzept):
+        for seite in (self.ideen, self.funktionen, self.konzept, self.kreativ):
             seite.geaendert.connect(self.uebersicht.aktualisieren)
             seite.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.anforderungen.geaendert.connect(self.uebersicht.aktualisieren)
@@ -260,7 +264,7 @@ class Hauptfenster(QMainWindow):
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
                 self.baugruppen, self.kollision, self.zeichnungen, self.arbeitsplaene, self.cam, self.kosten, self.montage,
                 self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku,
-                self.aufgaben, self.budget, self.bibliothek, self.abnahme)
+                self.aufgaben, self.budget, self.bibliothek, self.abnahme, self.kreativ)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -359,7 +363,7 @@ class Hauptfenster(QMainWindow):
             self.berechnungen.laden()
         elif schluessel == "uebersicht":
             self.uebersicht.aktualisieren()
-        elif schluessel in ("ideen", "funktionen", "konzept"):
+        elif schluessel in ("ideen", "funktionen", "konzept", "kreativ"):
             self.seiten[schluessel].laden()
         elif schluessel == "bauteile":
             self.bauteile.laden()
@@ -388,6 +392,9 @@ class Hauptfenster(QMainWindow):
         elif typ in ("idee", "widerspruch", "loesungsidee"):
             self.gehe_zu("ideen")
             self.ideen.auswaehlen(typ, id_)
+        elif typ == "kreativ":
+            self.gehe_zu("kreativ")
+            self.kreativ.auswaehlen(typ, id_)
         elif typ == "funktion":
             self.gehe_zu("funktionen")
             self.funktionen.auswaehlen(id_)
