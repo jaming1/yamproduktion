@@ -30,6 +30,7 @@ class AbnahmeSeite(QWidget):
     gespeichert = Signal()
     gehe_zu = Signal(str)
     exportieren = Signal()
+    archivieren = Signal()
 
     def __init__(self, buecher_zaehlen: Callable[[], int] | None = None):
         super().__init__()
@@ -50,8 +51,10 @@ class AbnahmeSeite(QWidget):
         zeile.addWidget(self.stand, 1)
         zeile.addWidget(_knopf("Neu prüfen", self.laden))
         zeile.addWidget(_knopf("Abnahmeprotokoll (PDF) …", lambda: self.pdf(), True))
-        zeile.addWidget(_knopf("Projekt exportieren …", self.exportieren.emit,
+        zeile.addWidget(_knopf("Exportieren …", self.exportieren.emit,
                                tipp="Ganzes Projekt als ZIP-Archiv, ohne Buchscans"))
+        zeile.addWidget(_knopf("In Yamaktaba archivieren", self.archivieren.emit,
+                               tipp="Archiv und Unterlagen durchsuchbar in deiner Bibliothek ablegen"))
         kl.addLayout(zeile)
         self.balken = QProgressBar()
         self.balken.setRange(0, 11)

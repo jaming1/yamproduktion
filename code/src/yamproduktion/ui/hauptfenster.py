@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 from .. import APP_NAME, __version__
 from ..modell import DATEIENDUNG, Projekt, ProjektFehler
-from ..wissen.bibliothek import anzahl_buecher
+from ..wissen import yamaktaba as Y
 from . import thema
 from .berechnungen_seite import BerechnungenSeite
 from .cad_seite import BauteilSeite
@@ -120,7 +120,7 @@ class Hauptfenster(QMainWindow):
         self.aufgaben = AufgabenSeite()
         self.budget = BudgetSeite()
         self.bibliothek = WissenSeite(self.einst)
-        self.abnahme = AbnahmeSeite(lambda: anzahl_buecher(self.bibliothek.ordner()))
+        self.abnahme = AbnahmeSeite(self.bibliothek.buecher_gesamt)
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -235,6 +235,7 @@ class Hauptfenster(QMainWindow):
         self.bibliothek.gespeichert.connect(lambda: self.berechnungen.laden())
         self.abnahme.gehe_zu.connect(self.gehe_zu)
         self.abnahme.exportieren.connect(lambda: self.projekt_exportieren())
+        self.abnahme.archivieren.connect(lambda: self.projekt_archivieren())
         self.bibliothek.gespeichert.connect(self.uebersicht.aktualisieren)
         self.kosten.arbeitsplan_oeffnen.connect(self.arbeitsplan_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
@@ -272,6 +273,9 @@ class Hauptfenster(QMainWindow):
         self.export_aktion.setShortcut("Ctrl+E")
         self.export_aktion.triggered.connect(lambda: self.projekt_exportieren())
         datei.addAction(self.export_aktion)
+        self.archiv_aktion = QAction("In Yamaktaba archivieren …", self)
+        self.archiv_aktion.triggered.connect(lambda: self.projekt_archivieren())
+        datei.addAction(self.archiv_aktion)
         imp = QAction("Projekt importieren …", self)
         imp.triggered.connect(lambda: self.projekt_importieren())
         datei.addAction(imp)
@@ -499,6 +503,37 @@ class Hauptfenster(QMainWindow):
             return None
         self.melden(f"Projekt exportiert: {pfad.name} – ohne Buchscans.")
         return pfad
+
+    def projekt_archivieren(self, fragen: bool = True) -> dict | None:
+        """Projekt in Yamaktaba ablegen: Archiv-ZIP und Unterlagen (durchsuchbar) in der Sammlung des Projekts."""
+        if not self.projekt:
+            return None
+        self.bibliothek.yk_laden()
+        yk = self.bibliothek.yk
+        if not yk:
+            QMessageBox.warning(self, "Yamaktaba nicht gefunden",
+                                "Bitte unter Wissen › Bibliothek den Yamaktaba-Ordner (ashamila) wählen.")
+            return None
+        n = len([d for d in self.projekt.dokumente() if d["pfad"].lower().endswith(".pdf")])
+        if fragen and QMessageBox.question(
+                self, "In Yamaktaba archivieren",
+                f"„{self.projekt.name}“ als Archiv (ZIP) und {n} Unterlagen als durchsuchbare Bücher in Yamaktaba "
+                f"ablegen (Kategorie „{Y.ARCHIV_KATEGORIE}“, Sammlung „YamProduktion: {self.projekt.name}“)?"
+                ) != QMessageBox.Yes:
+            return None
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            erg = yk.archivieren(self.projekt, lambda t: (self.statusBar().showMessage(t),
+                                                         QApplication.processEvents()))
+        except Exception as exc:
+            QMessageBox.warning(self, "Archivieren fehlgeschlagen", str(exc))
+            return None
+        finally:
+            QApplication.restoreOverrideCursor()
+        self.melden(f"In Yamaktaba archiviert: {len(erg['neu'])} Unterlagen neu"
+                    + (f", {len(erg['unveraendert'])} unverändert" if erg["unveraendert"] else "")
+                    + f" – Sammlung „{erg['sammlung']}“.")
+        return erg
 
     def projekt_importieren(self, archiv: str | None = None, ordner: str | None = None):
         if archiv is None:

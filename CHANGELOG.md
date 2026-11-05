@@ -158,3 +158,9 @@
 - **Vorlagen je Produkttyp** (S1) beim neuen Projekt: „Kleinwindanlage 5–10 kW“ (Anforderungen + Zeitplan), „nur Anforderungen“, „Leeres Projekt“
 - Ganzer Ablauf der Kleinwindanlage als automatischer Test: Idee → Konzept → 11 Berechnungen → Bauteile → Wertänderung 5 → 6 kW mit Neuberechnung → Arbeitspläne → Montage → Inbetriebnahme → FMEA/Risiko/Normen → Doku → Buchsuche → 11 von 11
 - 152 automatische Tests (2 neu) und Screenshots hell/dunkel
+
+## 05.11.2026 – Yamaktaba-Anbindung ✅ (Version 0.16.0)
+- **Yamaktaba als Wissensquelle**: Bibliothek-Seite sucht und fragt direkt in Yamaktaba (Sprache wählbar), zeigt die Seite mit Original-PDF und Kapitel, Formel übernehmen mit Fundstelle „(aus Yamaktaba)“; Zugriff nur lesend
+- **Yamaktaba als Archiv**: „In Yamaktaba archivieren“ (Ablage und Abnahme) legt Projekt-ZIP und Unterlagen ab, PDFs werden durchsuchbare Bücher in „99 Projekte & Medien“ und in der Sammlung „YamProduktion: <Projekt>“; doppelte PDFs werden erkannt
+- Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
+- 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel

@@ -1,0 +1,3 @@
+Kopie der Python-Schnittstelle von Yamaktaba (ashamila/code/src/ashamila, Stand 05.11.2026), nur für die Tests:
+damit baut der Test eine kleine Yamaktaba-Bibliothek. Die App selbst lädt immer die Schnittstelle aus dem
+echten Yamaktaba-Ordner.

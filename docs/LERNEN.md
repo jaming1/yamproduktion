@@ -108,3 +108,9 @@
 - **Erkenntnis Darstellung:** Beim Neuaufbau einer Liste reicht `deleteLater()` nicht – alte Karten bleiben bis zur nächsten Ereignisschleife sichtbar und liegen über der neuen Seite. Erst verstecken und vom Eltern-Widget lösen.
 - **Erkenntnis:** Zwei Abnahmekriterien (echte Bücher, echter Mac) kann keine Software prüfen. Ehrlich als „bestätigen“ zeigen statt grün zu rechnen.
 - **Für den Skill:** Einzahl/Mehrzahl bei Zählern („1 Idee“, nicht „1 Ideen“) gleich mit einer kleinen Hilfsfunktion lösen.
+
+## Yamaktaba-Anbindung (05.11.2026)
+- **Gut:** Die App bringt ihre Suche als Python-Paket mit – einbinden statt nachbauen ergibt dieselben Treffer wie in Yamaktaba, auf der echten 20-GB-Datenbank in unter einer Sekunde.
+- **Erkenntnis:** Fremde Datenbanken nur mit `mode=ro` öffnen; schreiben nur über die Funktionen der App selbst, damit ihr Schema stimmt.
+- **Erkenntnis:** Für Tests eine kleine Muster-Yamaktaba aus Kopien ihrer Schnittstelle bauen – nie in Yamines echte Bibliothek schreiben.
+- **Für den Skill:** Andere eigene Apps zuerst als Quelle/Archiv anbinden, bevor Daten doppelt gehalten werden.

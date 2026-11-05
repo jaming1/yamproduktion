@@ -17,6 +17,7 @@ from ..berechnungen import formel as F
 from ..berechnungen.basis import formatiere
 from ..modell import Projekt, ProjektFehler
 from ..wissen import texterkennung as T
+from ..wissen import yamaktaba as Y
 from ..wissen.bibliothek import HINWEIS_FRAGE, STANDARD_ORDNER, Bibliothek, BibliothekFehler, Treffer
 from .betrieb_seiten import _knopf
 from .seiten import karte, titel
@@ -176,17 +177,28 @@ class WissenSeite(QWidget):
         self._nr = 1
         self._suchwoerter: list[str] = []
         self.dok = QPdfDocument(self)
+        self._dok_pfad = ""
+        self.yk: Y.Yamaktaba | None = None
+        self._yk_seite: Y.Seite | None = None
+        self._ansicht = "lokal"            # was rechts gezeigt wird: "lokal" (eigene Scans) oder "yk"
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(32, 24, 32, 24)
-        lay.addWidget(titel("Bibliothek", "Eigene Fachbücher durchsuchen und Formeln mit Quelle übernehmen. "
-                                          "Die Scans bleiben auf diesem Mac und werden nie exportiert."))
+        lay.addWidget(titel("Bibliothek", "Fachbücher aus Yamaktaba und eigene Scans durchsuchen, Formeln mit Quelle "
+                                          "übernehmen. Die Bücher bleiben auf diesem Mac und werden nie exportiert."))
         teiler = QSplitter(Qt.Horizontal)
         lay.addWidget(teiler, 1)
 
         # ---- links: Bücher
         links, ll = karte()
-        k = QLabel("Bücher")
+        k = QLabel("Yamaktaba")
+        k.setObjectName("Abschnitt")
+        ll.addWidget(k)
+        self.yk_info = _klein()
+        ll.addWidget(self.yk_info)
+        ll.addWidget(_knopf("Yamaktaba-Ordner …", self._yk_ordner_waehlen,
+                            tipp="Ordner „ashamila“ mit code/ und daten/ – wird sonst selbst gefunden"))
+        k = QLabel("Eigene Scans")
         k.setObjectName("Abschnitt")
         ll.addWidget(k)
         self.buecher = QListWidget()
@@ -226,6 +238,19 @@ class WissenSeite(QWidget):
         self.suche = QLineEdit()
         self.suche.setPlaceholderText("Suchwörter oder eine Frage, z. B. „Wie berechne ich die Lagerlebensdauer?“")
         self.suche.returnPressed.connect(self.suchen)
+        quelle_zeile = QHBoxLayout()
+        self.quelle = QComboBox()
+        self.quelle.addItem("in Yamaktaba", "yk")
+        self.quelle.addItem("in eigenen Scans", "lokal")
+        self.quelle.currentIndexChanged.connect(self._quelle_geaendert)
+        self.sprache = QComboBox()
+        for code, name in Y.SPRACHEN.items():
+            self.sprache.addItem(name, code)
+        self.sprache.setCurrentIndex(self.sprache.findData("de"))
+        self.sprache.setToolTip("Nur Bücher dieser Sprache (Yamaktaba)")
+        quelle_zeile.addWidget(self.quelle, 1)
+        quelle_zeile.addWidget(self.sprache, 1)
+        ml.addLayout(quelle_zeile)
         ml.addWidget(self.suche)
         zeile = QHBoxLayout()
         zeile.addWidget(_knopf("Suchen", self.suchen, True, "Alle Wörter auf einer Seite; „…“ für Wortgruppen"))
@@ -248,14 +273,14 @@ class WissenSeite(QWidget):
         # ---- rechts: Seite
         rechts, rl = karte()
         kopf = QHBoxLayout()
-        self.zurueck = _knopf("◀", lambda: self.seite_zeigen(self._nr - 1), tipp="Vorherige Seite")
-        self.vor = _knopf("▶", lambda: self.seite_zeigen(self._nr + 1), tipp="Nächste Seite")
+        self.zurueck = _knopf("◀", lambda: self._blaettern(-1), tipp="Vorherige Seite")
+        self.vor = _knopf("▶", lambda: self._blaettern(1), tipp="Nächste Seite")
         self.seiten_info = QLabel("")
         self.seiten_info.setWordWrap(True)
         self.zoom = QComboBox()
         self.zoom.addItems(["75 %", "100 %", "150 %", "200 %"])
         self.zoom.setCurrentIndex(1)
-        self.zoom.currentIndexChanged.connect(lambda _i: self.seite_zeigen(self._nr))
+        self.zoom.currentIndexChanged.connect(lambda _i: self._blaettern(0))
         for w in (self.zurueck, self.vor):
             w.setFixedWidth(40)
         kopf.addWidget(self.zurueck)
@@ -287,7 +312,64 @@ class WissenSeite(QWidget):
     def ordner(self) -> Path:
         return Path(self.einst.value("bibliothek_ordner", str(STANDARD_ORDNER)))
 
+    def yk_laden(self):
+        """Yamaktaba finden und (nur lesend) öffnen."""
+        ordner = Y.ordner_finden(self.einst.value("yamaktaba_ordner", "") or None)
+        if self.yk and ordner and self.yk.ordner == ordner:
+            return
+        if self.yk:
+            self.yk.schliessen()
+            self.yk = None
+        if ordner:
+            try:
+                self.yk = Y.Yamaktaba(ordner)
+            except Y.YamaktabaFehler as exc:
+                self.meldung.emit(str(exc), True)
+        eintrag = self.quelle.model().item(0)
+        eintrag.setEnabled(self.yk is not None)
+        if self.yk:
+            try:
+                n, de = self.yk.anzahl_buecher(), self.yk.anzahl_buecher("de")
+                zahl = lambda z: f"{z:,}".replace(",", ".")  # noqa: E731
+                self.yk_info.setText(f"Verbunden: {zahl(n)} {'Buch' if n == 1 else 'Bücher'}, "
+                                     f"davon {zahl(de)} deutsch.")
+                self.yk_info.setToolTip(f"Ordner: {self.yk.ordner}")
+            except Exception as exc:
+                self.yk_info.setText(f"Yamaktaba gefunden, aber nicht lesbar: {exc}")
+        else:
+            self.yk_info.setText("Nicht gefunden. Über „Yamaktaba-Ordner …“ den Ordner „ashamila“ wählen.")
+            if self.quelle.currentData() == "yk":
+                self.quelle.setCurrentIndex(1)
+
+    def buecher_gesamt(self) -> int:
+        """Für die Abnahme (Kriterium 10): eigene Scans plus deutsche Bücher in Yamaktaba."""
+        from ..wissen.bibliothek import anzahl_buecher
+        self.yk_laden()
+        try:
+            yk = self.yk.anzahl_buecher("de") if self.yk else 0
+        except Exception:
+            yk = 0
+        return anzahl_buecher(self.ordner()) + yk
+
+    def _yk_ordner_waehlen(self):
+        pfad = QFileDialog.getExistingDirectory(self, "Yamaktaba-Ordner (ashamila)", str(Y.STANDARD_ORDNER.parent))
+        if not pfad:
+            return
+        if not Y.gueltig(Path(pfad)):
+            self.meldung.emit("In diesem Ordner ist keine Yamaktaba-Bibliothek (code/ und daten/ fehlen).", True)
+            return
+        self.einst.setValue("yamaktaba_ordner", pfad)
+        self.yk_laden()
+        self.quelle.setCurrentIndex(0)
+
+    def _quelle_geaendert(self, _i=None):
+        yk = self.quelle.currentData() == "yk"
+        self.sprache.setEnabled(yk)
+        self.nur_buch.setEnabled(not yk)
+
     def laden(self):
+        self.yk_laden()
+        self._quelle_geaendert()
         if self.bib is None or self.bib.ordner != self.ordner():
             if self.bib:
                 self.bib.schliessen()
@@ -387,6 +469,7 @@ class WissenSeite(QWidget):
         self.buch_info.setText(f"{self._buch.kurz} · {self._buch.seiten} Seiten · Text: {self._buch.erkannt}"
                                + (f" · {leer} Seiten ohne Text" if leer else ""))
         self.dok.load(str(self.bib.pfad(self._buch)))
+        self._dok_pfad = str(self.bib.pfad(self._buch))
         self.uebernehmen.setEnabled(True)
         if not self.treffer.count():
             self.seite_zeigen(1)
@@ -421,11 +504,11 @@ class WissenSeite(QWidget):
             self.laden()
 
     # ---------- Suche und Fragen
-    def _treffer_zeigen(self, liste: list[Treffer]):
+    def _treffer_zeigen(self, liste: list):
         self.treffer.clear()
         for t in liste:
             it = QListWidgetItem()
-            it.setData(Qt.UserRole, (t.buch.id, t.nr))
+            it.setData(Qt.UserRole, ("yk", t.buch_id, t.seite_id) if isinstance(t, Y.Fund) else ("lokal", t.buch.id, t.nr))
             label = QLabel(f"<b>{t.fundstelle}</b><br>{t.ausschnitt}")
             label.setWordWrap(True)
             label.setTextFormat(Qt.RichText)
@@ -443,6 +526,19 @@ class WissenSeite(QWidget):
         text = self.suche.text().strip()
         if not text:
             return
+        if self.quelle.currentData() == "yk" and self.yk:
+            try:
+                gesamt, liste = self.yk.suchen(text, self.sprache.currentData())
+            except Y.YamaktabaFehler as exc:
+                self.meldung.emit(str(exc), True)
+                return
+            self._suchwoerter = re.findall(r"[\wÄÖÜäöüß]+", text)
+            menge = f"{gesamt:,}".replace(",", ".") + (" Seite" if gesamt == 1 else " Seiten")
+            self.antwort.setText(f"{menge} in Yamaktaba gefunden"
+                                 + (f", die besten {len(liste)}." if gesamt > len(liste) else ".") if liste else
+                                 "Nichts gefunden. Weniger Wörter versuchen – oder „Fragen“, dann zählt jedes Wort.")
+            self._treffer_zeigen(liste)
+            return
         try:
             liste = self.bib.suchen(text, buch_id=self.nur_buch.currentData())
         except BibliothekFehler as exc:
@@ -459,7 +555,8 @@ class WissenSeite(QWidget):
         text = self.suche.text().strip()
         if not text:
             return
-        woerter, liste = self.bib.frage(text)
+        yk = self.quelle.currentData() == "yk" and self.yk
+        woerter, liste = self.yk.frage(text, self.sprache.currentData()) if yk else self.bib.frage(text)
         self._suchwoerter = woerter
         if not liste:
             self.antwort.setText("Keine passende Stelle in den Büchern gefunden.")
@@ -473,7 +570,10 @@ class WissenSeite(QWidget):
         it = self.treffer.item(zeile) if zeile >= 0 else None
         if not it:
             return
-        buch_id, nr = it.data(Qt.UserRole)
+        quelle, buch_id, nr = it.data(Qt.UserRole)
+        if quelle == "yk":
+            self.yk_seite_zeigen(buch_id, nr)
+            return
         if not self._buch or self._buch.id != buch_id:
             for i in range(self.buecher.count()):
                 if self.buecher.item(i).data(Qt.UserRole) == buch_id:
@@ -489,14 +589,25 @@ class WissenSeite(QWidget):
             return
         nr = max(1, min(nr, self._buch.seiten))
         self._nr = nr
+        self._ansicht = "lokal"
+        pfad = str(self.bib.pfad(self._buch))
+        if self._dok_pfad != pfad:
+            self.dok.load(pfad)
+            self._dok_pfad = pfad
         text, kapitel = self.bib.seitentext(self._buch.id, nr)
         s = self._buch.buchseite(nr)
         self.seiten_info.setText(f"S. {s}" + (f" (PDF {nr})" if s != nr else "") + f" von {self._buch.seiten}"
                                  + (f" · {kapitel}" if kapitel else ""))
         self.zurueck.setEnabled(nr > 1)
         self.vor.setEnabled(nr < self._buch.seiten)
+        self._pdf_seite(nr)
+        self.text.setPlainText(text or "(Auf dieser Seite wurde kein Text erkannt.)")
+        self._hervorheben()
+
+    def _pdf_seite(self, nr: int) -> bool:
+        """Seite nr (1-basiert) des geladenen PDFs auf weißem Papier zeigen."""
         faktor = [0.75, 1.0, 1.5, 2.0][self.zoom.currentIndex()]
-        if self.dok.pageCount() >= nr:
+        if 1 <= nr <= self.dok.pageCount():
             gr = self.dok.pagePointSize(nr - 1)
             breite = int(max(300, self.flaeche.viewport().width() - 30) * faktor)
             bild = self.dok.render(nr - 1, QSize(breite, int(gr.height() / gr.width() * breite)))
@@ -506,8 +617,45 @@ class WissenSeite(QWidget):
             maler.drawImage(0, 0, bild)
             maler.end()
             self.bild.setPixmap(papier)
-        self.text.setPlainText(text or "(Auf dieser Seite wurde kein Text erkannt.)")
+            return True
+        self.bild.setPixmap(QPixmap())
+        self.bild.setText("Kein Original-PDF zu dieser Seite – unten steht der Text.")
+        return False
+
+    def _blaettern(self, schritt: int):
+        if self._ansicht == "yk" and self._yk_seite:
+            ziel = {-1: self._yk_seite.vorher, 1: self._yk_seite.nachher, 0: self._yk_seite.seite_id}[schritt]
+            if ziel is not None:
+                self.yk_seite_zeigen(self._yk_seite.buch_id, ziel)
+        else:
+            self.seite_zeigen(self._nr + schritt)
+
+    def yk_seite_zeigen(self, buch_id: int, seite_id: int):
+        """Seite aus Yamaktaba: Text, Fundstelle und – wenn vorhanden – die Seite im Original-PDF."""
+        if not self.yk:
+            return
+        try:
+            s = self.yk.seite(buch_id, seite_id)
+        except Y.YamaktabaFehler as exc:
+            self.meldung.emit(str(exc), True)
+            return
+        self._yk_seite, self._ansicht = s, "yk"
+        wo = (f"S. {s.seite}" if s.seite else f"Seite {s.seite_id}") + (f" (PDF {s.seite_id})" if s.seite and
+                                                                         s.seite != s.seite_id else "")
+        self.seiten_info.setText(f"{s.titel} · {wo}" + (f" · {s.kapitel}" if s.kapitel else ""))
+        self.zurueck.setEnabled(s.vorher is not None)
+        self.vor.setEnabled(s.nachher is not None)
+        pdf = s.original if s.original and s.original.suffix.lower() == ".pdf" else None
+        if pdf and self._dok_pfad != str(pdf):
+            self.dok.load(str(pdf))
+            self._dok_pfad = str(pdf)
+        if not pdf or not self._pdf_seite(s.seite_id):
+            self.bild.setPixmap(QPixmap())
+            self.bild.setText("Kein Original-PDF zu diesem Buch – unten steht der Text.")
+        text = s.text + (f"\n\n— Fußnoten —\n{s.fussnoten}" if s.fussnoten else "")
+        self.text.setPlainText(text or "(Auf dieser Seite steht kein Text.)")
         self._hervorheben()
+        self.uebernehmen.setEnabled(True)
 
     def _hervorheben(self):
         auswahl = []
@@ -524,6 +672,8 @@ class WissenSeite(QWidget):
         self.text.setExtraSelections(auswahl)
 
     def fundstelle(self) -> str:
+        if self._ansicht == "yk" and self._yk_seite:
+            return self._yk_seite.fundstelle + " (aus Yamaktaba)"
         if not self._buch:
             return ""
         _, kapitel = self.bib.seitentext(self._buch.id, self._nr)

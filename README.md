@@ -2,7 +2,7 @@
 
 Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen, Berechnung, eigene CAD-Konstruktion, Fertigung und Montage bis zur Inbetriebnahme führt. Erstes Produkt: eine Mini-Windkraftanlage (5–10 kW).
 
-**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS15 fertig (zuletzt „Abnahme“, Version 0.15.0 – Version 1.0.0 nach deiner Bestätigung der Kriterien 10 und 11). Plan: `docs/03_PLAN.md`.
+**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS15 fertig, dazu Yamaktaba-Anbindung (Version 0.16.0 – Version 1.0.0 nach deiner Bestätigung der Kriterien 10 und 11). Plan: `docs/03_PLAN.md`.
 
 ## Starten (Mac)
 
@@ -52,8 +52,10 @@ Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen,
 31. **Formel aus dem Buch rechnen**: auf der Bibliothek-Seite die Formel im erkannten Text markieren → **Als Berechnung übernehmen …** → Werte mit Einheit eintragen → **Rechnen** → **Als Berechnung speichern**. Die Berechnung erscheint unter Berechnungen, mit Buch, Kapitel und Seite als Quelle.
 32. **Abnahme Version 1** (Seitenleiste › Projektmanagement): prüft die 11 Abnahmekriterien aus dem Lastenheft am Projekt – grün erfüllt, rot mit Liste, was fehlt, und **Öffnen** springt zur Stelle. Erzeugte PDFs merkt sich das Projekt automatisch. Kriterium 10 (Buchsuche) und 11 (Lauf auf dem Mac) bestätigst du selbst. **Abnahmeprotokoll (PDF)** mit Unterschriftenfeld.
 33. **Projekt exportieren** (Ablage, ⌘E): ganzes Projekt als ZIP – Projektdatei und alle erzeugten Unterlagen, **ohne** Buchscans. **Projekt importieren** entpackt so ein Archiv in einen Ordner und öffnet es.
-34. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
-35. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen · ⌘E Projekt exportieren.
+34. **Yamaktaba** (deine Bibliotheks-App): wird automatisch gefunden. Auf der Bibliothek-Seite **in Yamaktaba** wählen (Sprache: Deutsch, Englisch, Französisch, Arabisch oder alle) – Suchen, Fragen, Seite mit Original-PDF ansehen und Formeln mit Fundstelle als Berechnung übernehmen wie bei eigenen Scans. YamProduktion liest nur, an deinen Büchern wird nichts verändert. Ein anderer Ordner lässt sich über **Yamaktaba-Ordner …** wählen.
+35. **In Yamaktaba archivieren** (Ablage oder Seite Abnahme): legt das Projekt-ZIP und alle erzeugten PDFs in `bibliothek/YamProduktion/<Projekt>/<Datum>/` ab und nimmt die PDFs als durchsuchbare Bücher in Yamaktaba auf – Kategorie „99 Projekte & Medien“, Sammlung „YamProduktion: <Projekt>“. Unveränderte PDFs werden nicht doppelt aufgenommen.
+36. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
+37. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen · ⌘E Projekt exportieren.
 
 Projekte aus MS1 und MS2 werden beim Öffnen automatisch auf das neue Format umgestellt (vorher wird gesichert).
 
