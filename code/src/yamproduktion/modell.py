@@ -28,7 +28,7 @@ VORLAGEN = {
     "kwa_anforderungen": ("Kleinwindanlage – nur Anforderungen", "Typische Anforderungen, ohne Zeitplan"),
     "leer": ("Leeres Projekt", "Ohne Vorgaben – für ein anderes Produkt"),
 }
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 13
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -206,6 +206,15 @@ CREATE TABLE IF NOT EXISTS bewertung (
     PRIMARY KEY (variante_id, kriterium_id)
 );
 """
+
+# K4 (Schema 13): gewollte Kollisionen je Baugruppe – Paar von Einbauten mit Begründung (E41)
+SCHEMA_KOLLISION = """CREATE TABLE IF NOT EXISTS kollision_ausnahme (
+    baugruppe_id INTEGER NOT NULL, einbau_a TEXT NOT NULL, einbau_b TEXT NOT NULL,
+    begruendung TEXT NOT NULL, erstellt TEXT NOT NULL,
+    PRIMARY KEY (baugruppe_id, einbau_a, einbau_b)
+);
+"""
+SCHEMA = SCHEMA + SCHEMA_KOLLISION
 
 BEISPIEL_ANFORDERUNGEN_KWA = [
     ("Elektrische Nennleistung", 5.0, "kW", "Muss", "Anforderung"),
@@ -450,6 +459,8 @@ class Projekt:
             # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen;
             # 10: Aufgaben)
             self._db.executescript(SCHEMA)
+        if von < 13:
+            self._db.executescript(SCHEMA_KOLLISION)        # K4: Ausnahmen der Kollisionsprüfung
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
 
@@ -1155,6 +1166,52 @@ class Projekt:
 
     def baugruppe_loeschen(self, id_: int) -> None:
         self.objekt_loeschen("baugruppe", id_)
+        self._db.execute("DELETE FROM kollision_ausnahme WHERE baugruppe_id=?", (id_,))
+        self._db.commit()
+
+    # ================================================================ Kollision, Masse, Schwerpunkt (K4)
+    def kollision_ausnahmen(self, baugruppe_id: int) -> dict:
+        """Gewollte Kollisionen: {(einbau_a, einbau_b): Begründung}."""
+        zeilen = self._db.execute("SELECT einbau_a, einbau_b, begruendung FROM kollision_ausnahme "
+                                  "WHERE baugruppe_id=? ORDER BY einbau_a, einbau_b", (baugruppe_id,))
+        return {(a, b): t for a, b, t in zeilen}
+
+    def kollision_ausnahme_setzen(self, baugruppe_id: int, einbau_a: str, einbau_b: str,
+                                  begruendung: str | None) -> None:
+        """Paar als gewollt festhalten (mit Begründung) oder – bei leerer Begründung – wieder aufheben."""
+        from .cad.kollision import paar
+        a, b = paar(einbau_a, einbau_b)
+        self.baugruppe(baugruppe_id)          # gibt es sie?
+        text = (begruendung or "").strip()
+        if text:
+            self._db.execute("INSERT INTO kollision_ausnahme VALUES(?,?,?,?,?) ON CONFLICT(baugruppe_id, einbau_a, "
+                             "einbau_b) DO UPDATE SET begruendung=excluded.begruendung, erstellt=excluded.erstellt",
+                             (baugruppe_id, a, b, text, _jetzt()))
+            self._protokollieren("baugruppe", baugruppe_id, f"Kollision {a}/{b} als gewollt vermerkt: {text}")
+        else:
+            self._db.execute("DELETE FROM kollision_ausnahme WHERE baugruppe_id=? AND einbau_a=? AND einbau_b=?",
+                             (baugruppe_id, a, b))
+            self._protokollieren("baugruppe", baugruppe_id, f"Kollision {a}/{b}: Ausnahme aufgehoben")
+        self._db.commit()
+
+    def kollision_mindestabstand(self, baugruppe_id: int) -> float:
+        try:
+            return float(self.meta(f"kollision_mindestabstand_{baugruppe_id}", "0"))
+        except ValueError:
+            return 0.0
+
+    def kollision_mindestabstand_setzen(self, baugruppe_id: int, wert: float) -> None:
+        self._setze_meta(f"kollision_mindestabstand_{baugruppe_id}", str(max(0.0, float(wert))))
+        self._db.commit()
+
+    def kollision_pruefen(self, baugruppe_id: int, mindestabstand: float | None = None):
+        """Gespeicherte Baugruppe bauen und prüfen → (Ergebnis, Pruefung, Massen)."""
+        from .cad import kollision
+        g = self.baugruppe(baugruppe_id)
+        erg = self.baugruppe_bauen(g["definition"])
+        abstand = self.kollision_mindestabstand(baugruppe_id) if mindestabstand is None else mindestabstand
+        pr = kollision.pruefen(erg, g["definition"], self.kollision_ausnahmen(baugruppe_id), abstand)
+        return erg, pr, kollision.massen(erg, g["definition"])
 
     # ================================================================ Zeichnungen (MS8, für MS12 wiederverwendbar)
     def passmasse(self, typ: str, id_: int) -> str:

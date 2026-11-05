@@ -889,3 +889,43 @@ def abnahme_v1_erstellen(kriterien: list, ziel: str | Path, projekt: str = "", e
     unterschrift.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.6, colors.black)]))
     inhalt.append(unterschrift)
     return _dokument(ziel, "Abnahme YamProduktion Version 1", inhalt)
+
+
+def kollisionsbericht_erstellen(pruefung, massen, ziel: str | Path, name: str, nr: str = "", projekt: str = "") -> Path:
+    """Prüfbericht einer Baugruppe (Lastenheft K4): Kollisionsbefunde mit Ausnahmen, Masse, Schwerpunkt, Trägheit."""
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [P(f"Kollision &amp; Schwerpunkt {_x(nr)} {_x(name)}", "h1"),
+              P(f"Projekt: {_x(projekt)} &nbsp;·&nbsp; Stand: {datetime.now():%d.%m.%Y %H:%M} &nbsp;·&nbsp; "
+                f"Mindestabstand {formatiere(pruefung.mindestabstand)} mm", "klein"),
+              P("Kollisionsprüfung", "h2"),
+              P(f"<b>{_x(pruefung.zusammenfassung())}</b> &nbsp;·&nbsp; {pruefung.paare_geprueft} von "
+                f"{pruefung.paare_gesamt} Paaren genau geprüft (übrige liegen weit auseinander)")]
+    if pruefung.befunde:
+        daten = [["Art", "Teil A", "Teil B", "Überschn. mm³", "Abstand mm", "Gewollt – Begründung"]]
+        for b in pruefung.befunde:
+            daten.append([b.art, P(_x(b.name_a)), P(_x(b.name_b)),
+                          formatiere(b.volumen) if b.volumen else "–", formatiere(b.abstand),
+                          P(_x(b.ausnahme) or ("offen" if b.ist_fehler else "–"))])
+        inhalt.append(tabelle(daten, [27 * mm, 34 * mm, 34 * mm, 22 * mm, 19 * mm, 34 * mm]))
+    sx, sy, sz = massen.schwerpunkt
+    j1, j2, j3 = (w * 1e-6 for w in massen.haupt)
+    inhalt += [P("Masse und Schwerpunkt", "h2"),
+               P(f"<b>Gesamtmasse {formatiere(massen.masse)} kg</b> &nbsp;·&nbsp; Schwerpunkt x = {formatiere(sx)}, "
+                 f"y = {formatiere(sy)}, z = {formatiere(sz)} mm"),
+               P(f"Hauptträgheitsmomente um den Schwerpunkt: {formatiere(j1)} · {formatiere(j2)} · "
+                 f"{formatiere(j3)} kg·m²")]
+    daten = [["Einbau", "Menge", "Masse kg", "Anteil"]]
+    for z in massen.je_einbau:
+        daten.append([P(_x(f"{z.einbau} {z.name}")), str(z.menge), "–" if z.masse is None else formatiere(z.masse),
+                      f"{z.anteil * 100:.1f} %".replace(".", ",")])
+    inhalt.append(tabelle(daten, [90 * mm, 20 * mm, 30 * mm, 30 * mm]))
+    if massen.ohne_masse:
+        inhalt.append(P("Ohne Masse (nicht in der Summe): " + _x(", ".join(massen.ohne_masse)), "klein"))
+    inhalt += [Spacer(1, 8),
+               P("Befunde sind Hinweise, keine Urteile. Berührung ist oft gewollt (z. B. Lager auf Welle). Normteile "
+                 "sind vereinfacht dargestellt (z. B. Schrauben ohne Gewinde, Gegenstück ohne Bohrung) – solche "
+                 "Überdeckungen werden mit Begründung als gewollt vermerkt. Trägheit unter Annahme gleichmäßiger "
+                 "Dichte je Teil.", "klein")]
+    return _dokument(ziel, f"Kollision & Schwerpunkt {name}", inhalt)
