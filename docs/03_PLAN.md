@@ -80,6 +80,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 ## 3. Was du parallel schon tun kannst
 
 - **Bücher scannen** (als PDF, 300 dpi, ein PDF pro Buch, Dateiname = Buchtitel). Bis MS14 liegen sie dann bereit. Bei MS5 nutze ich gern Rechenbeispiele daraus für die Tests.
+- **Bücher (Stand 05.11.2026):** Yamine bereitet die Fachbücher im Projekt **Ashamila** vor. Sobald sie fertig sind, werden Rechenbeispiele und Katalogwerte von dort abgefragt (Ashamila-Werkzeuge: Suche, Seite lesen) statt hier neu gescannt.
 - **Eckdaten der Windkraftanlage** sammeln: Standort, mittlere Windgeschwindigkeit, Netz- oder Inselbetrieb, gewünschte Nabenhöhe.
 
 ---
