@@ -183,3 +183,14 @@
 - Masse und Schwerpunkt jetzt mit **Massenträgheit** um den Schwerpunkt (Hauptträgheitsmomente in kg·m²) und **Masse je Einbau** mit Anteil; Teile ohne Masse werden genannt
 - Prüfbericht als PDF (Befunde, Begründungen, Masse, Schwerpunkt, Trägheit); wird als Unterlage im Projekt gemerkt
 - Projektdatei Schema 13: neue Tabelle `kollision_ausnahme`, ältere Projekte werden beim Öffnen ergänzt
+
+### K5 CAM-Export
+- Neue Seite „Fertigung › CAM-Export (G-Code)“: aus 3D-Teil und Arbeitsplan entstehen NC-Programme nach DIN 66025 / ISO 6983 (E42)
+  - Drehen in zwei Aufspannungen: Plandrehen, Zentrieren mit Reitstock-Halt bei schlanken Wellen, Bohren/Ausdrehen auf der Achse, Längsschruppen mit Schlichtaufmaß, Schlichten entlang der Kontur mit Fasen
+  - Fräsen: Passfedernuten, Bohrbilder je Aufspannrichtung (Anbohren, Tiefbohren mit Entspänen), Außenkontur bei plattenförmigen Teilen; Zahnräder: nur der Rohling
+  - Kontur aus dem Volumenmodell abgetastet: Planschultern bleiben plan, Fasen und Kegel werden mitgedreht; Querbohrungen und Sacklöcher werden erkannt und gemeldet
+  - Steuerungen DIN (Satznummern), Fanuc-ähnlich, LinuxCNC, Werkzeugwechsel mit Längen- bzw. Schneidenkorrektur je Steuerung; Sicherheitsabstand, Schnitttiefe, Schlichtaufmaß, Kühlmittel und Programmnummer einstellbar
+  - Prüfung des erzeugten Codes: Verfahrwege, Hauptzeit im Vergleich zum Arbeitsplan, typische Fehler (Vorschub ohne F, Schnitt bei stehender Spindel, Eilgang im Werkstück, fehlendes Programmende); Werkzeugweg-Vorschau
+  - NC-Programme werden je Bauteil mit Version gespeichert (NC-001 …) und als `.nc`-Dateien exportiert; ändert sich das Bauteil, steht das Programm auf „neu prüfen“
+  - Projektdatei-Schema 14 (neue Tabelle `ncprogramm`, ältere Projekte werden beim Öffnen ergänzt)
+  - Hinweis: G-Code ist ungeprüft und muss vor dem Einsatz im Simulator der Steuerung getestet werden

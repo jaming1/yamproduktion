@@ -76,6 +76,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 **Kann-Anforderungen** (K2 Kreativmethoden, K3 Blattelementmethode, K5 CAM-Export) kommen nach MS15 oder werden eingeschoben, wenn Zeit bleibt.
 
 - **K4 Kollisionsprüfung, Masse und Schwerpunkt:** ✅ 05.11.2026 – Seite „Kollision & Schwerpunkt“ mit Ausnahmen, Trägheit und Prüfbericht (E41).
+- **K5 CAM-Export** ✅ (05.11.2026, unveröffentlicht): G-Code für Drehen (zwei Aufspannungen), Passfedernuten, Bohrbilder und Plattenkonturen mit Prüfung und Vorschau – siehe E42. Grenzen: keine Einstiche, Gewinde, Verzahnungen und Freiformkonturen.
 
 ---
 
