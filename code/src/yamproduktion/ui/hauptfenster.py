@@ -1,6 +1,7 @@
 """Hauptfenster: einklappbare Seitenleiste + große Arbeitsfläche (N7)."""
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, Qt, QTimer
@@ -13,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from .. import APP_NAME, __version__
 from ..modell import DATEIENDUNG, Projekt, ProjektFehler
+from ..wissen.bibliothek import anzahl_buecher
 from . import thema
 from .berechnungen_seite import BerechnungenSeite
 from .cad_seite import BauteilSeite
@@ -29,6 +31,7 @@ from .rechen_seite import RechenSeite
 from .seiten import AnforderungenSeite, NeuesProjektDialog, UebersichtSeite, WillkommenSeite
 from .werkstoff_seite import WerkstoffSeite
 from .wissen_seite import WissenSeite
+from .abnahme_seite import AbnahmeSeite
 from .zeichnung_seite import ZeichnungSeite
 
 # (Text, Schlüssel); Schlüssel None = Gruppenüberschrift (nicht wählbar)
@@ -77,6 +80,7 @@ NAVIGATION = [
     ("PROJEKTMANAGEMENT", None),
     ("   Aufgaben & Zeitplan", "aufgaben"),
     ("   Kosten Plan/Ist", "budget"),
+    ("   Abnahme Version 1", "abnahme"),
     ("WISSEN", None),
     ("   Bibliothek", "bibliothek"),
     ("Werkstoffe", "werkstoffe"),
@@ -116,6 +120,7 @@ class Hauptfenster(QMainWindow):
         self.aufgaben = AufgabenSeite()
         self.budget = BudgetSeite()
         self.bibliothek = WissenSeite(self.einst)
+        self.abnahme = AbnahmeSeite(lambda: anzahl_buecher(self.bibliothek.ordner()))
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -131,7 +136,7 @@ class Hauptfenster(QMainWindow):
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
                        "aufgaben": self.aufgaben, "budget": self.budget,
-                       "bibliothek": self.bibliothek, **self.rechenseiten}
+                       "bibliothek": self.bibliothek, "abnahme": self.abnahme, **self.rechenseiten}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
 
@@ -228,6 +233,8 @@ class Hauptfenster(QMainWindow):
             q.gespeichert.connect(self.uebersicht.aktualisieren)
         self.aufgaben.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.bibliothek.gespeichert.connect(lambda: self.berechnungen.laden())
+        self.abnahme.gehe_zu.connect(self.gehe_zu)
+        self.abnahme.exportieren.connect(lambda: self.projekt_exportieren())
         self.bibliothek.gespeichert.connect(self.uebersicht.aktualisieren)
         self.kosten.arbeitsplan_oeffnen.connect(self.arbeitsplan_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
@@ -243,7 +250,7 @@ class Hauptfenster(QMainWindow):
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
                 self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
                 self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku,
-                self.aufgaben, self.budget, self.bibliothek)
+                self.aufgaben, self.budget, self.bibliothek, self.abnahme)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -260,6 +267,14 @@ class Hauptfenster(QMainWindow):
             a.setShortcut(kuerzel)
             a.triggered.connect(funktion)
             datei.addAction(a)
+        datei.addSeparator()
+        self.export_aktion = QAction("Projekt exportieren (Archiv) …", self)
+        self.export_aktion.setShortcut("Ctrl+E")
+        self.export_aktion.triggered.connect(lambda: self.projekt_exportieren())
+        datei.addAction(self.export_aktion)
+        imp = QAction("Projekt importieren …", self)
+        imp.triggered.connect(lambda: self.projekt_importieren())
+        datei.addAction(imp)
         datei.addSeparator()
         sichern = QAction("Sicherung jetzt anlegen", self)
         sichern.triggered.connect(self.sicherung_anlegen)
@@ -339,7 +354,7 @@ class Hauptfenster(QMainWindow):
             self.modellieren.laden()
         elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
                             "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku", "aufgaben", "budget",
-                            "bibliothek"):
+                            "bibliothek", "abnahme"):
             self.seiten[schluessel].laden()
         elif schluessel in RECHENSEITEN and self.projekt:
             self.seiten[schluessel]._verknuepfung_zeigen()
@@ -449,7 +464,8 @@ class Hauptfenster(QMainWindow):
         if dialog.exec() != NeuesProjektDialog.Accepted:
             return
         try:
-            projekt = Projekt.neu(dialog.pfad(), dialog.name.text(), dialog.produkt.text(), dialog.beispiel.isChecked())
+            projekt = Projekt.neu(dialog.pfad(), dialog.name.text(), dialog.produkt.text(),
+                                  vorlage=dialog.vorlage.currentData())
         except (ProjektFehler, OSError) as exc:
             QMessageBox.warning(self, "Projekt konnte nicht angelegt werden", str(exc))
             return
@@ -466,6 +482,40 @@ class Hauptfenster(QMainWindow):
             self.projekt_laden(Projekt.oeffnen(pfad))
         except ProjektFehler as exc:
             QMessageBox.warning(self, "Projekt konnte nicht geöffnet werden", str(exc))
+
+    def projekt_exportieren(self, ziel: str | None = None) -> Path | None:
+        """K1: ganzes Projekt als ZIP (Projektdatei + erzeugte Unterlagen, ohne Buchinhalte)."""
+        if not self.projekt:
+            return None
+        if ziel is None:
+            vorschlag = self.projekt.pfad.parent / f"{self.projekt.pfad.stem}_{date.today():%Y-%m-%d}.zip"
+            ziel, _ = QFileDialog.getSaveFileName(self, "Projekt exportieren", str(vorschlag), "Archiv (*.zip)")
+            if not ziel:
+                return None
+        try:
+            pfad = self.projekt.exportieren(ziel)
+        except (OSError, ProjektFehler) as exc:
+            QMessageBox.warning(self, "Export fehlgeschlagen", str(exc))
+            return None
+        self.melden(f"Projekt exportiert: {pfad.name} – ohne Buchscans.")
+        return pfad
+
+    def projekt_importieren(self, archiv: str | None = None, ordner: str | None = None):
+        if archiv is None:
+            archiv, _ = QFileDialog.getOpenFileName(self, "Projekt importieren", str(Path.home()), "Archiv (*.zip)")
+            if not archiv:
+                return None
+        if ordner is None:
+            ordner = QFileDialog.getExistingDirectory(self, "Wohin entpacken?", str(Path(archiv).parent))
+            if not ordner:
+                return None
+        try:
+            projekt = Projekt.importieren(archiv, ordner)
+        except (OSError, ProjektFehler) as exc:
+            QMessageBox.warning(self, "Import fehlgeschlagen", str(exc))
+            return None
+        self.projekt_laden(projekt)
+        return projekt
 
     def projekt_schliessen(self):
         if self.projekt:

@@ -2,7 +2,7 @@
 
 Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen, Berechnung, eigene CAD-Konstruktion, Fertigung und Montage bis zur Inbetriebnahme führt. Erstes Produkt: eine Mini-Windkraftanlage (5–10 kW).
 
-**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS14 fertig (zuletzt „Wissensbasis“, Version 0.14.0). Plan: `docs/03_PLAN.md`.
+**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS15 fertig (zuletzt „Abnahme“, Version 0.15.0 – Version 1.0.0 nach deiner Bestätigung der Kriterien 10 und 11). Plan: `docs/03_PLAN.md`.
 
 ## Starten (Mac)
 
@@ -15,7 +15,7 @@ Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen,
 
 ## Benutzen
 
-1. **Neues Projekt anlegen** (⌘N). Vorgeschlagen ist „Kleinwindanlage KWA-5“ mit typischen Anforderungen. Projekte liegen als `.yamp`-Datei in `Dokumente/YamProduktion/`.
+1. **Neues Projekt anlegen** (⌘N). Vorgeschlagen ist „Kleinwindanlage KWA-5“ mit der **Vorlage** „Kleinwindanlage 5–10 kW“ (typische Anforderungen und Zeitplan); für ein anderes Produkt „Leeres Projekt“ wählen. Projekte liegen als `.yamp`-Datei in `Dokumente/YamProduktion/`.
 2. **Anforderungen**: Text, Zielwert, Einheit, Art (Anforderung/Eigenschaft), Priorität und Status direkt in der Tabelle ändern. Alles wird sofort gespeichert, jede Änderung erhöht die Version. Rechts zeigt die **Rückverfolgung**, wovon eine Zeile abhängt, worauf sie wirkt und was sich wann geändert hat.
 3. **Rotorauslegung**: „Werte aus Anforderungen übernehmen“, dann **Protokoll speichern (PDF)** (⌘S). Die Berechnung wird dabei mit den Anforderungen verknüpft.
 4. **Änderung durchspielen**: Nennleistung von 5 auf 10 kW ändern → die Berechnung wird „⚠ neu prüfen“, die Übersicht zeigt einen Hinweis. Unter **Berechnungen** auf **Neu berechnen** klicken – der Verlauf zeigt „D 4,792 → 6,778 m“.
@@ -50,8 +50,10 @@ Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen,
 29. **Kosten Plan/Ist**: **Plan aus Kalkulation** übernimmt die Herstellkosten je Baugruppe; eigene Posten (Genehmigung, Prüfung, Werkzeuge …) mit Plan und Ist eintragen. Die Übersicht zeigt je Kostenart Plan, Ist und Abweichung (rot ab +10 %); als PDF.
 30. **Bibliothek** (Seitenleiste › Wissen): **PDF …** fügt ein gescanntes Buch hinzu (**Bilder …** für Seitenfotos). Scans ohne Text werden per Texterkennung lesbar – dazu einmal im Terminal `brew install ocrmypdf tesseract-lang`. **Seitenversatz** so einstellen, dass die angezeigte Seite der gedruckten Seitenzahl entspricht. **Suchen** findet Seiten mit allen Wörtern (Wortgruppen in „…“), **Fragen** nimmt eine normale Frage und zeigt die besten Fundstellen – immer selbst nachlesen. Klick auf einen Treffer öffnet die Seite. Die Bücher bleiben nur auf diesem Mac (eigener Ordner, nie im Projekt oder Export).
 31. **Formel aus dem Buch rechnen**: auf der Bibliothek-Seite die Formel im erkannten Text markieren → **Als Berechnung übernehmen …** → Werte mit Einheit eintragen → **Rechnen** → **Als Berechnung speichern**. Die Berechnung erscheint unter Berechnungen, mit Buch, Kapitel und Seite als Quelle.
-32. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
-33. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen.
+32. **Abnahme Version 1** (Seitenleiste › Projektmanagement): prüft die 11 Abnahmekriterien aus dem Lastenheft am Projekt – grün erfüllt, rot mit Liste, was fehlt, und **Öffnen** springt zur Stelle. Erzeugte PDFs merkt sich das Projekt automatisch. Kriterium 10 (Buchsuche) und 11 (Lauf auf dem Mac) bestätigst du selbst. **Abnahmeprotokoll (PDF)** mit Unterschriftenfeld.
+33. **Projekt exportieren** (Ablage, ⌘E): ganzes Projekt als ZIP – Projektdatei und alle erzeugten Unterlagen, **ohne** Buchscans. **Projekt importieren** entpackt so ein Archiv in einen Ordner und öffnet es.
+34. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
+35. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen · ⌘E Projekt exportieren.
 
 Projekte aus MS1 und MS2 werden beim Öffnen automatisch auf das neue Format umgestellt (vorher wird gesichert).
 

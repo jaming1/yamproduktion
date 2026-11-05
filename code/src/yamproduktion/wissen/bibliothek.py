@@ -231,3 +231,15 @@ class Bibliothek:
                     treffer.append(t)
                     gesehen.add((t.buch.id, t.nr))
         return staemme, treffer
+
+
+def anzahl_buecher(ordner: str | Path | None = None) -> int:
+    """Bücher in der Bibliothek zählen, ohne einen leeren Bibliotheksordner anzulegen."""
+    datei = Path(ordner or STANDARD_ORDNER) / "bibliothek.sqlite"
+    if not datei.exists():
+        return 0
+    with sqlite3.connect(datei) as db:
+        try:
+            return db.execute("SELECT COUNT(*) FROM buch").fetchone()[0]
+        except sqlite3.Error:
+            return 0

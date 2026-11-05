@@ -427,6 +427,7 @@ class RechenSeite(QWidget):
                 return None
         try:
             pfad = protokoll_erstellen(daten, ziel, self.projekt.name, eintrag.nr)
+            self.projekt.dokument_merken("protokoll", pfad, eintrag.nr)
         except OSError as exc:
             self.meldung.emit(f"PDF konnte nicht gespeichert werden: {exc}. Anderen Ordner wählen?", True)
             return None

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 
 from ..berechnungen.basis import formatiere
 from ..einheiten import EinheitFehler, umrechnen, zahl_lesen
-from ..modell import (ARTEN_ANFORDERUNG, DATEIENDUNG, NEU_PRUEFEN, PRIORITAETEN, STATUS, Projekt,
+from ..modell import (VORLAGEN, ARTEN_ANFORDERUNG, DATEIENDUNG, NEU_PRUEFEN, PRIORITAETEN, STATUS, Projekt,
                       ProjektFehler)
 from .rueckverfolgung import RueckverfolgungPanel
 
@@ -86,8 +86,15 @@ class NeuesProjektDialog(QDialog):
         form = QFormLayout()
         self.name = QLineEdit("Kleinwindanlage KWA-5")
         self.produkt = QLineEdit("Mini-Windkraftanlage 5 kW")
-        self.beispiel = QCheckBox("Typische Anforderungen einer Kleinwindanlage vorab eintragen")
-        self.beispiel.setChecked(True)
+        self.vorlage = QComboBox()
+        for schluessel, (anzeige, beschreibung) in VORLAGEN.items():
+            self.vorlage.addItem(anzeige, schluessel)
+            self.vorlage.setItemData(self.vorlage.count() - 1, beschreibung, Qt.ToolTipRole)
+        self.vorlage_info = QLabel(VORLAGEN["kwa"][1])
+        self.vorlage_info.setObjectName("Klein")
+        self.vorlage_info.setWordWrap(True)
+        self.vorlage.currentIndexChanged.connect(
+            lambda _i: self.vorlage_info.setText(VORLAGEN[self.vorlage.currentData()][1]))
         ordner = Path(QStandardPaths.writableLocation(QStandardPaths.DocumentsLocation)) / "YamProduktion"
         self.ordner = QLineEdit(str(ordner))
         aendern = QPushButton("Ändern …")
@@ -98,7 +105,8 @@ class NeuesProjektDialog(QDialog):
         form.addRow("Projektname", self.name)
         form.addRow("Produkt", self.produkt)
         form.addRow("Speicherort", ordner_zeile)
-        form.addRow("", self.beispiel)
+        form.addRow("Vorlage", self.vorlage)
+        form.addRow("", self.vorlage_info)
         lay.addLayout(form)
 
         knoepfe = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -240,6 +248,7 @@ class UebersichtSeite(QWidget):
                 return None
         from ..pdf import lastenheft_erstellen
         pfad = lastenheft_erstellen(self.projekt, ziel)
+        self.projekt.dokument_merken("lastenheft", pfad)
         self.meldung.emit(f"Produkt-Lastenheft gespeichert: {Path(pfad).name}", False)
         return pfad
 

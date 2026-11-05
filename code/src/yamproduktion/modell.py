@@ -21,6 +21,13 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
+# Vorlagen je Produkttyp (S1): Schlüssel → (Anzeige, Beschreibung)
+VORLAGEN = {
+    "kwa": ("Kleinwindanlage 5–10 kW",
+            "Typische Anforderungen (Leistung, Windzone, Lebensdauer …) und Zeitplan mit Aufgaben und Meilensteinen"),
+    "kwa_anforderungen": ("Kleinwindanlage – nur Anforderungen", "Typische Anforderungen, ohne Zeitplan"),
+    "leer": ("Leeres Projekt", "Ohne Vorgaben – für ein anderes Produkt"),
+}
 SCHEMA_VERSION = 10
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
@@ -288,7 +295,9 @@ class Projekt:
 
     # ================================================================ Anlegen / Öffnen
     @classmethod
-    def neu(cls, pfad: str | Path, name: str, produkt: str = "", beispiel_kwa: bool = False) -> "Projekt":
+    def neu(cls, pfad: str | Path, name: str, produkt: str = "", beispiel_kwa: bool = False,
+            vorlage: str = "") -> "Projekt":
+        """Neues Projekt. `vorlage`: Schlüssel aus VORLAGEN (S1); beispiel_kwa=True entspricht „kwa_anforderungen“."""
         pfad = Path(pfad)
         if pfad.suffix != DATEIENDUNG:
             pfad = pfad.with_suffix(DATEIENDUNG)
@@ -305,10 +314,96 @@ class Projekt:
         projekt._setze_meta("produkt", produkt.strip())
         projekt._setze_meta("erstellt", _jetzt())
         projekt._phasen_anlegen()
-        if beispiel_kwa:
+        vorlage = vorlage or ("kwa_anforderungen" if beispiel_kwa else "leer")
+        if vorlage not in VORLAGEN:
+            raise ProjektFehler(f"Die Vorlage „{vorlage}“ gibt es nicht.")
+        if vorlage != "leer":
             for text, wert, einheit, prio, art in BEISPIEL_ANFORDERUNGEN_KWA:
                 projekt.anforderung_neu(text, wert, einheit, prio, quelle="Vorlage Kleinwindanlage", art=art)
+        if vorlage == "kwa":
+            projekt.zeitplan_vorlage()
+        if vorlage != "leer":
+            projekt._setze_meta("vorlage", vorlage)
         db.commit()
+        return projekt
+
+    # ================================================================ Export / Import (K1)
+    def exportieren(self, ziel: str | Path, unterlagen: bool = True) -> Path:
+        """Ganzes Projekt als ZIP-Archiv: Projektdatei (konsistente Kopie) und die erzeugten Unterlagen.
+        Bücher und Buchtexte aus der Bibliothek sind nie enthalten (M52)."""
+        import tempfile
+        import zipfile
+        ziel = Path(ziel)
+        if ziel.suffix.lower() != ".zip":
+            ziel = ziel.with_suffix(".zip")
+        ziel.parent.mkdir(parents=True, exist_ok=True)
+        self._db.commit()
+        mitgenommen, fehlend = [], []
+        with tempfile.TemporaryDirectory() as tmp:
+            kopie = Path(tmp) / f"{self.pfad.stem}{DATEIENDUNG}"
+            ziel_db = sqlite3.connect(kopie)
+            self._db.backup(ziel_db)
+            ziel_db.close()
+            with zipfile.ZipFile(ziel, "w", zipfile.ZIP_DEFLATED) as z:
+                z.write(kopie, kopie.name)
+                if unterlagen:
+                    namen = set()
+                    for d in self.dokumente():
+                        quelle = Path(d["pfad"])
+                        if not quelle.is_file():
+                            fehlend.append(d["datei"])
+                            continue
+                        name = quelle.name
+                        while name in namen:
+                            name = f"{quelle.stem}_{len(namen)}{quelle.suffix}"
+                        namen.add(name)
+                        z.write(quelle, f"Unterlagen/{name}")
+                        mitgenommen.append(name)
+                z.writestr("LIESMICH.txt", (
+                    f"YamProduktion – Projekt „{self.name}“\n"
+                    f"Exportiert am {datetime.now():%d.%m.%Y %H:%M}\n\n"
+                    f"{kopie.name}: die Projektdatei (SQLite). In YamProduktion über Ablage › Projekt importieren "
+                    "öffnen oder mit jedem SQLite-Programm lesen.\n"
+                    f"Unterlagen/: {len(mitgenommen)} erzeugte PDFs und Exporte.\n"
+                    + (f"Nicht mehr vorhanden: {', '.join(fehlend)}\n" if fehlend else "")
+                    + "Buchscans und Buchtexte sind bewusst nicht enthalten.\n"))
+        self._protokollieren("projekt", 0, f"Projekt exportiert: {ziel.name} ({len(mitgenommen)} Unterlagen)")
+        self._db.commit()
+        return ziel
+
+    @classmethod
+    def importieren(cls, archiv: str | Path, ordner: str | Path) -> "Projekt":
+        """Archiv aus exportieren() in `ordner` entpacken und das Projekt öffnen. Überschreibt nichts."""
+        import zipfile
+        archiv, ordner = Path(archiv), Path(ordner)
+        try:
+            z = zipfile.ZipFile(archiv)
+        except (zipfile.BadZipFile, OSError) as exc:
+            raise ProjektFehler(f"{archiv.name} ist kein lesbares Projektarchiv.") from exc
+        with z:
+            dateien = [n for n in z.namelist() if n.endswith(DATEIENDUNG) and "/" not in n]
+            if len(dateien) != 1:
+                raise ProjektFehler(f"In {archiv.name} steckt keine Projektdatei ({DATEIENDUNG}).")
+            ziel = ordner / dateien[0]
+            if ziel.exists():
+                raise ProjektFehler(f"{ziel.name} gibt es in {ordner} schon. Bitte einen anderen Ordner wählen.")
+            ordner.mkdir(parents=True, exist_ok=True)
+            for n in z.namelist():
+                teile = Path(n).parts
+                if not teile or ".." in teile or Path(n).is_absolute():
+                    continue                          # nichts außerhalb des Zielordners schreiben
+                if n == dateien[0] or (teile[0] == "Unterlagen" and not n.endswith("/")):
+                    zielname = ordner / (f"{ziel.stem}_Unterlagen/{teile[-1]}" if teile[0] == "Unterlagen" else n)
+                    zielname.parent.mkdir(parents=True, exist_ok=True)
+                    zielname.write_bytes(z.read(n))
+        projekt = cls.oeffnen(ziel, sicherung=False)
+        neu = []
+        for d in projekt.dokumente():                  # Pfade der Unterlagen auf den neuen Ort umstellen
+            kopie = ordner / f"{ziel.stem}_Unterlagen" / Path(d["pfad"]).name
+            neu.append({**d, "pfad": str(kopie)} if kopie.exists() else d)
+        projekt._setze_meta("dokumente", json.dumps(neu, ensure_ascii=False))
+        projekt._protokollieren("projekt", 0, f"Projekt importiert aus {archiv.name}")
+        projekt._db.commit()
         return projekt
 
     @classmethod
@@ -1198,6 +1293,33 @@ class Projekt:
 
     def montageplatten(self) -> list[dict]:
         return [t for t in self.teile() if t["vorlage"] == "montageplatte"]
+
+    # ================================================================ Erzeugte Unterlagen und Abnahme (MS15)
+    def dokument_merken(self, art: str, pfad, bezug: str = ""):
+        """Merkt, dass eine Unterlage (PDF, DXF, CSV) erzeugt wurde – Nachweis für die Abnahme."""
+        liste = [d for d in self.dokumente() if not (d["art"] == art and d["bezug"] == bezug)]
+        liste.append({"art": art, "bezug": bezug, "datei": Path(pfad).name, "pfad": str(pfad), "datum": _jetzt()})
+        self._setze_meta("dokumente", json.dumps(liste, ensure_ascii=False))
+        self._db.commit()
+
+    def dokumente(self, art: str | None = None) -> list[dict]:
+        liste = json.loads(self.meta("dokumente") or "[]")
+        return [d for d in liste if art is None or d["art"] == art]
+
+    def abnahme_bestaetigungen(self) -> dict:
+        return json.loads(self.meta("abnahme") or "{}")
+
+    def abnahme_bestaetigen(self, nr: int, ja: bool, notiz: str = ""):
+        """Kriterien, die nur der Mensch prüfen kann (Buchsuche mit echten Scans, Lauf auf dem Mac)."""
+        daten = self.abnahme_bestaetigungen()
+        if ja:
+            daten[str(nr)] = {"datum": _jetzt(), "notiz": notiz.strip()}
+        else:
+            daten.pop(str(nr), None)
+        self._setze_meta("abnahme", json.dumps(daten, ensure_ascii=False))
+        self._protokollieren("projekt", 0, f"Abnahmekriterium {nr} " + ("bestätigt" if ja else "zurückgenommen")
+                             + (f": {notiz.strip()}" if notiz.strip() else ""))
+        self._db.commit()
 
     # ================================================================ Inbetriebnahme & Betrieb (MS11)
     _BETRIEB_WERTE = (("rotorauslegung", "n"), ("rotorauslegung", "P_el"), ("bremse", "t_Br"),

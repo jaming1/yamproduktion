@@ -856,3 +856,36 @@ def kostenuebersicht_erstellen(posten: list[dict], uebersicht: list[dict], aufga
     inhalt.append(Spacer(1, 4 * mm))
     inhalt.append(P(_x(K.HINWEIS), "klein"))
     return _dokument(ziel, f"Kostenübersicht {projekt}", inhalt)
+
+
+def abnahme_v1_erstellen(kriterien: list, ziel: str | Path, projekt: str = "", ersteller: str = "") -> Path:
+    """MS15: Abnahmeprotokoll der App (Version 1) mit den 11 Kriterien aus dem Lastenheft, Nachweisen und Lücken."""
+    from .abnahme import BESTAETIGEN, ERFUELLT, zusammenfassung
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    zelle = ParagraphStyle("z", parent=s["text"], fontSize=8.5, leading=11)
+    erfuellt, gesamt = zusammenfassung(kriterien)
+    inhalt = _kopf_betrieb(s, "Abnahme YamProduktion – Version 1", "", projekt,
+                           f"{erfuellt} von {gesamt} Kriterien erfüllt")
+    farbe = {ERFUELLT: "gruen", BESTAETIGEN: "gelb"}
+    daten, stil = [[Paragraph(f"<b>{t}</b>", zelle) for t in ("Nr", "Kriterium", "Nachweise / was fehlt", "Stand")]], []
+    for i, k in enumerate(kriterien, 1):
+        zeilen = [f"• {_x(n)}" for n in k.nachweise] + [f"<font color='#B3261E'>fehlt: {_x(f)}</font>" for f in k.fehlt]
+        if k.stand == BESTAETIGEN:
+            zeilen.append("Von Yamine zu bestätigen")
+        daten.append([Paragraph(str(k.nr), zelle), Paragraph(_x(k.titel), zelle),
+                      Paragraph("<br/>".join(zeilen) or "–", zelle), Paragraph(k.stand, zelle)])
+        stil.append(("BACKGROUND", (3, i), (3, i), colors.HexColor(_AMPEL[farbe.get(k.stand, "rot")])))
+    t = tabelle(daten, [10 * mm, 52 * mm, 88 * mm, 22 * mm])
+    t.setStyle(TableStyle(stil + [("VALIGN", (0, 0), (-1, -1), "TOP")]))
+    inhalt.append(t)
+    inhalt.append(Spacer(1, 6 * mm))
+    inhalt.append(P("Die App ist ein Werkzeug für Auslegung und Dokumentation. Für Genehmigung, Netzanschluss und "
+                    "CE-Kennzeichnung der echten Anlage ist eine Prüfung durch Sachverständige vorzusehen.", "klein"))
+    inhalt.append(Spacer(1, 14 * mm))
+    unterschrift = tabelle([["Ort, Datum", "Unterschrift" + (f" ({_x(ersteller)})" if ersteller else "")]],
+                           [80 * mm, 92 * mm])
+    unterschrift.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.6, colors.black)]))
+    inhalt.append(unterschrift)
+    return _dokument(ziel, "Abnahme YamProduktion Version 1", inhalt)

@@ -654,6 +654,7 @@ class DokuSeite(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
         self.letztes = Path(pfad)
+        self.projekt.dokument_merken("technische_doku", pfad)
         self.laden()
         fehlt = [k for k, s, _ in inhalt if s is None]
         from pypdf import PdfReader

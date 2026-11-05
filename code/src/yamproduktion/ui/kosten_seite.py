@@ -268,6 +268,7 @@ class KostenSeite(QWidget):
         from ..pdf import kalkulation_erstellen
         pfad = kalkulation_erstellen(g["name"], g["nr"], self.zeilen, self.summe, self.fehlend, self.anzahl.value(),
                                      ziel, self.projekt.name)
+        self.projekt.dokument_merken("kalkulation", pfad, g["nr"])
         self.meldung.emit(f"Kalkulation gespeichert: {Path(pfad).name}", False)
         return Path(pfad)
 

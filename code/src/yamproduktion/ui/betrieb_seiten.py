@@ -420,6 +420,7 @@ class InbetriebnahmeSeite(QWidget):
         from ..pdf import abnahmeprotokoll_erstellen, messprotokoll_erstellen
         fn = abnahmeprotokoll_erstellen if art == "abnahme" else messprotokoll_erstellen
         pfad = fn(o, ziel, self.projekt.name)
+        self.projekt.dokument_merken("abnahmeprotokoll" if art == "abnahme" else "messprotokoll", pfad, o["nr"])
         self.meldung.emit(f"{name} gespeichert: {Path(pfad).name}", False)
         return Path(pfad)
 

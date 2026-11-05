@@ -71,7 +71,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 
 | Nr | Meilenstein | Ergebnis | Anforderungen | Status | Datum |
 |----|-------------|----------|---------------|--------|-------|
-| MS15 | **Abnahme mit der echten Windkraftanlage** | Alle 11 Abnahmekriterien aus dem Lastenheft (Abschnitt 6) sind erfüllt. Vorlage „Kleinwindanlage“ fertig, Projekt-Export, README. | S1, K1, Abnahme 1–11 | ⏳ | |
+| MS15 | **Abnahme mit der echten Windkraftanlage** | Alle 11 Abnahmekriterien aus dem Lastenheft (Abschnitt 6) sind erfüllt. Vorlage „Kleinwindanlage“ fertig, Projekt-Export, README. | S1, K1, Abnahme 1–11 | ✅ Software (ganzer Ablauf im Test bis „11 von 11“). Kriterium 10 (Buchsuche mit den echten Büchern aus Ashamila) und 11 (Lauf auf Yamines Mac) bestätigt Yamine in der App – danach Version 1.0.0 | 05.11.2026 |
 
 **Kann-Anforderungen** (K2 Kreativmethoden, K3 Blattelementmethode, K5 CAM-Export) kommen nach MS15 oder werden eingeschoben, wenn Zeit bleibt.
 

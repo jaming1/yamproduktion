@@ -101,3 +101,10 @@
 - **Erkenntnis Darstellung:** PDF-Seiten haben einen durchsichtigen Hintergrund – im Dunkelmodus erst auf weißes Papier zeichnen, sonst ist schwarzer Text auf Schwarz.
 - **Erkenntnis:** Eine Frage muss als „Vorschlag, nicht geprüft“ erscheinen und immer auf die Seite zeigen – die Antwort ist die Fundstelle, nicht ein erfundener Satz.
 - **Für den Skill:** In Shell-Befehlen nie eine Variable benutzen, die in diesem Aufruf nicht gesetzt ist (`cat > $S/x` wartete ohne `S` auf Eingabe).
+
+## MS15 (05.11.2026)
+- **Gut:** Der ganze Ablauf als ein Test lief beim ersten Versuch durch – die Bausteine der früheren Meilensteine passen ohne Nacharbeit zusammen.
+- **Erkenntnis:** „PDF erzeugt“ ist nur dann ein Nachweis, wenn es nach der letzten Änderung erzeugt wurde. Ein Protokoll von Version 1 belegt Version 2 nicht.
+- **Erkenntnis Darstellung:** Beim Neuaufbau einer Liste reicht `deleteLater()` nicht – alte Karten bleiben bis zur nächsten Ereignisschleife sichtbar und liegen über der neuen Seite. Erst verstecken und vom Eltern-Widget lösen.
+- **Erkenntnis:** Zwei Abnahmekriterien (echte Bücher, echter Mac) kann keine Software prüfen. Ehrlich als „bestätigen“ zeigen statt grün zu rechnen.
+- **Für den Skill:** Einzahl/Mehrzahl bei Zählern („1 Idee“, nicht „1 Ideen“) gleich mit einer kleinen Hilfsfunktion lösen.

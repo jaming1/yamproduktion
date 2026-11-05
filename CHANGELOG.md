@@ -150,3 +150,11 @@
 - **Fragen** in normaler Sprache: Stichwörter ohne Füllwörter, die besten Fundstellen, deutlich als „Vorschlag, nicht geprüft“ gekennzeichnet
 - **Formel als Berechnung übernehmen**: Formel aus der markierten Buchstelle, Werte mit Einheiten (Pint), Ergebnis-Einheit, Rechenweg; gespeichert als B-00x mit der Fundstelle als Quelle und Hinweis „Formel aus Buch – prüfen“; neu rechnen möglich
 - 150 automatische Tests (9 neu) und Screenshots hell/dunkel
+
+## 05.11.2026 – MS15 Abnahme ✅ (Version 0.15.0)
+- Neue Seite **Abnahme Version 1**: die 11 Abnahmekriterien aus dem Lastenheft werden am Projekt geprüft – Nachweise, was fehlt, Sprung zur Stelle; Getriebe entfällt automatisch bei gewähltem Direktantrieb; Kriterien 10 und 11 bestätigt Yamine mit Notiz; **Abnahmeprotokoll** als PDF
+- Das Projekt merkt sich jede erzeugte Unterlage (Lastenheft, Protokolle, Zeichnungen, Stückliste, Kalkulation, Montageanleitung, Abnahmeprotokoll, technische Doku)
+- **Projekt exportieren/importieren** (K1): ZIP mit konsistenter Kopie der Projektdatei und allen Unterlagen, ohne Buchscans; Import überschreibt nichts und stellt die Pfade um
+- **Vorlagen je Produkttyp** (S1) beim neuen Projekt: „Kleinwindanlage 5–10 kW“ (Anforderungen + Zeitplan), „nur Anforderungen“, „Leeres Projekt“
+- Ganzer Ablauf der Kleinwindanlage als automatischer Test: Idee → Konzept → 11 Berechnungen → Bauteile → Wertänderung 5 → 6 kW mit Neuberechnung → Arbeitspläne → Montage → Inbetriebnahme → FMEA/Risiko/Normen → Doku → Buchsuche → 11 von 11
+- 152 automatische Tests (2 neu) und Screenshots hell/dunkel

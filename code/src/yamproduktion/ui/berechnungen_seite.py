@@ -206,5 +206,6 @@ class BerechnungenSeite(QWidget):
             if not ziel:
                 return None
         pfad = protokoll_erstellen(b.ergebnis, ziel, self.projekt.name, f"{b.nr} (Version {b.version})")
+        self.projekt.dokument_merken("protokoll", pfad, b.nr)
         self.meldung.emit(f"Protokoll gespeichert: {Path(pfad).name}", False)
         return pfad

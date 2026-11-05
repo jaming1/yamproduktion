@@ -587,5 +587,6 @@ class MontageSeite(QWidget):
             if not ziel:
                 return None
         pfad = anleitung_pdf(self.projekt, self.gid, self.plan, ziel, self.erg, self.szene, self.explosion_basis)
+        self.projekt.dokument_merken("montageanleitung", pfad, g["nr"])
         self.meldung.emit(f"Montageanleitung gespeichert: {Path(pfad).name}", False)
         return Path(pfad)

@@ -430,6 +430,7 @@ class BaugruppenSeite(QWidget):
         except OSError as exc:
             self.meldung.emit(f"Speichern fehlgeschlagen: {exc}", True)
             return None
+        self.projekt.dokument_merken("stueckliste", ziel, self.name.text().strip())
         self.meldung.emit(f"Stückliste gespeichert: {Path(ziel).name}", False)
         return Path(ziel)
 

@@ -226,6 +226,7 @@ class ZeichnungSeite(QWidget):
         except OSError as exc:
             self.meldung.emit(f"Speichern fehlgeschlagen: {exc}", True)
             return None
+        self.projekt.dokument_merken("zeichnung_" + art, pfad, self.zeichnung.titel or "")
         self.meldung.emit(f"Zeichnung gespeichert: {Path(pfad).name}", False)
         return Path(pfad)
 
