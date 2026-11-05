@@ -28,7 +28,7 @@ VORLAGEN = {
     "kwa_anforderungen": ("Kleinwindanlage – nur Anforderungen", "Typische Anforderungen, ohne Zeitplan"),
     "leer": ("Leeres Projekt", "Ohne Vorgaben – für ein anderes Produkt"),
 }
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -62,6 +62,7 @@ OBJEKTE = {
     "normen":       ("NL", "name", "P2", "Normen-Checkliste"),
     "abweichung":   ("QA", "name", "P6", "Abweichungsliste"),
     "aufgabe":      ("AU", "titel", "", "Aufgabe"),          # Querschnitt: Phase steht in der Aufgabe
+    "kreativ":      ("KS", "titel", "P1", "Kreativsitzung"),  # K2: Brainstorming, 6-3-5, Mindmap
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -204,6 +205,17 @@ CREATE TABLE IF NOT EXISTS pruefplan (
 CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
     PRIMARY KEY (variante_id, kriterium_id)
+);
+CREATE TABLE IF NOT EXISTS kreativ (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
+    methode TEXT NOT NULL DEFAULT 'brainstorming', titel TEXT NOT NULL DEFAULT '', frage TEXT NOT NULL DEFAULT '',
+    idee_id INTEGER, teilnehmer INTEGER NOT NULL DEFAULT 6,""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS kreativ_eintrag (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, sitzung_id INTEGER NOT NULL, text TEXT NOT NULL DEFAULT '',
+    gruppe TEXT NOT NULL DEFAULT '', punkte INTEGER NOT NULL DEFAULT 0, x REAL, y REAL,
+    blatt INTEGER, runde INTEGER, spalte INTEGER, eltern_id INTEGER, idee_id INTEGER, loesung_id INTEGER,
+    erstellt TEXT NOT NULL
 );
 """
 
@@ -449,6 +461,9 @@ class Projekt:
             # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
             # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen;
             # 10: Aufgaben)
+            self._db.executescript(SCHEMA)
+        if von < 11:
+            # 11: Kreativmethoden (K2) – nur neue Tabellen kreativ und kreativ_eintrag
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -1769,6 +1784,7 @@ class Projekt:
         "abweichung": {"art", "name", "daten"},
         "aufgabe": {"titel", "verantwortlich", "start", "termin", "stand", "phase", "objekt_typ", "objekt_id",
                     "meilenstein", "kosten_plan", "kosten_ist", "notiz"},
+        "kreativ": {"methode", "titel", "frage", "idee_id", "teilnehmer"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
@@ -1777,7 +1793,8 @@ class Projekt:
                    "reihenfolge": "Reihenfolge", "art": "Art", "idee_id": "Idee", "widerspruch_id": "Widerspruch",
                    "prinzipien": "Prinzipien", "verantwortlich": "Verantwortlich", "start": "Start",
                    "termin": "Termin", "stand": "Stand", "phase": "Phase", "kosten_plan": "Kosten Plan",
-                   "kosten_ist": "Kosten Ist", "notiz": "Notiz", "meilenstein": "Meilenstein"}
+                   "kosten_ist": "Kosten Ist", "notiz": "Notiz", "meilenstein": "Meilenstein",
+                   "methode": "Methode", "frage": "Leitfrage", "teilnehmer": "Teilnehmende"}
 
     def _zeile(self, typ: str, zeile: sqlite3.Row | tuple | None, spalten: list[str]) -> dict | None:
         return dict(zip(spalten, zeile)) if zeile else None
@@ -1849,6 +1866,8 @@ class Projekt:
                 self.objekt_loeschen("loesungsidee", l["id"])
         elif typ == "loesungsidee":
             self._db.execute("UPDATE loesung SET loesungsidee_id=NULL WHERE loesungsidee_id=?", (id_,))
+        elif typ == "kreativ":
+            self._db.execute("DELETE FROM kreativ_eintrag WHERE sitzung_id=?", (id_,))
         elif typ == "teil":
             ap = self.arbeitsplan_von_teil(id_)
             if ap:
@@ -2080,3 +2099,186 @@ class Projekt:
     def gewaehltes_konzept(self) -> dict | None:
         gewaehlt = self.liste("variante", "gewaehlt=1")
         return gewaehlt[0] if gewaehlt else None
+
+    # ================================================================ Kreativmethoden (K2)
+    _EINTRAG_SPALTEN = ("id", "sitzung_id", "text", "gruppe", "punkte", "x", "y", "blatt", "runde", "spalte",
+                        "eltern_id", "idee_id", "loesung_id", "erstellt")
+    _EINTRAG_FELDER = {"text", "gruppe", "punkte", "x", "y", "eltern_id"}
+
+    def kreativ_neu(self, methode: str, titel_: str = "", frage: str = "", idee_id: int | None = None,
+                    teilnehmer: int = 6) -> dict:
+        """Neue Kreativsitzung (Brainstorming, 6-3-5 oder Mindmap), optional zu einer Idee."""
+        from . import kreativ
+        try:
+            name = kreativ.methode_name(methode)
+            if methode == "635":
+                teilnehmer = kreativ.pruefe_teilnehmer(teilnehmer)
+        except kreativ.KreativFehler as exc:
+            raise ProjektFehler(str(exc)) from exc
+        s = self.objekt_neu("kreativ", methode=methode, titel=titel_.strip() or name, frage=frage.strip(),
+                            idee_id=idee_id, teilnehmer=int(teilnehmer))
+        if idee_id:
+            self.verknuepfen("idee", idee_id, "kreativ", s["id"])
+            self._db.commit()
+        return s
+
+    def kreativ_idee_setzen(self, sitzung_id: int, idee_id: int | None) -> dict:
+        """Sitzung einer Idee zuordnen (oder lösen); die Verknüpfung wandert mit."""
+        s = self.objekt("kreativ", sitzung_id)
+        if s["idee_id"] == idee_id:
+            return s
+        if idee_id:
+            self.verknuepfen("idee", idee_id, "kreativ", sitzung_id)      # prüft auf Kreise, bevor etwas geändert wird
+        if s["idee_id"]:
+            self._db.execute("DELETE FROM verknuepfung WHERE quelle_typ='idee' AND quelle_id=? AND ziel_typ='kreativ' "
+                             "AND ziel_id=?", (s["idee_id"], sitzung_id))
+        return self.objekt_aendern("kreativ", sitzung_id, idee_id=idee_id)
+
+    def kreativ_sitzungen(self, methode: str | None = None) -> list[dict]:
+        if methode:
+            return self.liste("kreativ", "methode=?", (methode,))
+        return self.liste("kreativ")
+
+    def _eintrag(self, eintrag_id: int) -> dict:
+        z = self._db.execute(f"SELECT {', '.join(self._EINTRAG_SPALTEN)} FROM kreativ_eintrag WHERE id=?",
+                             (eintrag_id,)).fetchone()
+        if z is None:
+            raise ProjektFehler("Diesen Beitrag gibt es nicht mehr.")
+        return dict(zip(self._EINTRAG_SPALTEN, z))
+
+    def kreativ_eintrag(self, eintrag_id: int) -> dict:
+        return self._eintrag(eintrag_id)
+
+    def kreativ_eintraege(self, sitzung_id: int) -> list[dict]:
+        zeilen = self._db.execute(f"SELECT {', '.join(self._EINTRAG_SPALTEN)} FROM kreativ_eintrag "
+                                  "WHERE sitzung_id=? ORDER BY id", (sitzung_id,)).fetchall()
+        return [dict(zip(self._EINTRAG_SPALTEN, z)) for z in zeilen]
+
+    def _sitzung_beruehrt(self, sitzung_id: int) -> None:
+        """Beiträge ändern die Sitzung inhaltlich, erzeugen aber keine neue Version (sonst Hunderte)."""
+        self._db.execute("UPDATE kreativ SET geaendert=? WHERE id=?", (_jetzt(), sitzung_id))
+        self._phase_in_arbeit("P1", "Kreativsitzung bearbeitet")
+
+    def kreativ_eintrag_neu(self, sitzung_id: int, text: str, **felder) -> dict:
+        """Neuer Zettel (Brainstorming) oder Knoten (Mindmap; ``eltern_id`` = übergeordneter Knoten)."""
+        from . import kreativ
+        s = self.objekt("kreativ", sitzung_id)
+        if not text.strip():
+            raise ProjektFehler("Bitte zuerst einen Text eingeben.")
+        unbekannt = set(felder) - self._EINTRAG_FELDER
+        if unbekannt:
+            raise ProjektFehler(f"Unbekannte Felder: {', '.join(sorted(unbekannt))}")
+        if s["methode"] == "brainstorming" and felder.get("x") is None:
+            felder["x"], felder["y"] = kreativ.freier_platz(self.kreativ_eintraege(sitzung_id))
+        if felder.get("eltern_id") is not None and self._eintrag(felder["eltern_id"])["sitzung_id"] != sitzung_id:
+            raise ProjektFehler("Der übergeordnete Knoten gehört zu einer anderen Sitzung.")
+        spalten = ["sitzung_id", "text", "erstellt", *felder]
+        cur = self._db.execute(
+            f"INSERT INTO kreativ_eintrag({', '.join(spalten)}) VALUES({', '.join('?' * len(spalten))})",
+            (sitzung_id, text.strip(), _jetzt(), *felder.values()))
+        self._sitzung_beruehrt(sitzung_id)
+        self._db.commit()
+        return self._eintrag(cur.lastrowid)
+
+    def kreativ_eintrag_aendern(self, eintrag_id: int, **felder) -> dict:
+        unbekannt = set(felder) - self._EINTRAG_FELDER
+        if unbekannt:
+            raise ProjektFehler(f"Unbekannte Felder: {', '.join(sorted(unbekannt))}")
+        e = self._eintrag(eintrag_id)
+        if "text" in felder:
+            felder["text"] = felder["text"].strip()
+            if not felder["text"]:
+                raise ProjektFehler("Ein Beitrag braucht einen Text – zum Entfernen „Löschen“ wählen.")
+        if "punkte" in felder:
+            felder["punkte"] = max(0, int(felder["punkte"]))
+        if felder.get("eltern_id") is not None:
+            # kein Kreis: der neue Elternknoten darf nicht unter diesem Knoten hängen
+            k = felder["eltern_id"]
+            while k is not None:
+                if k == eintrag_id:
+                    raise ProjektFehler("Ein Knoten kann nicht unter sich selbst hängen.")
+                k = self._eintrag(k)["eltern_id"]
+        geaendert = {k: v for k, v in felder.items() if e[k] != v}
+        if geaendert:
+            setz = ", ".join(f"{k}=?" for k in geaendert)
+            self._db.execute(f"UPDATE kreativ_eintrag SET {setz} WHERE id=?", (*geaendert.values(), eintrag_id))
+            self._sitzung_beruehrt(e["sitzung_id"])
+            self._db.commit()
+        return self._eintrag(eintrag_id)
+
+    def kreativ_eintrag_loeschen(self, eintrag_id: int) -> None:
+        """Löscht den Beitrag; in der Mindmap mit allen Zweigen darunter."""
+        e = self._eintrag(eintrag_id)
+        for (kind,) in self._db.execute("SELECT id FROM kreativ_eintrag WHERE eltern_id=?", (eintrag_id,)).fetchall():
+            self.kreativ_eintrag_loeschen(kind)
+        self._db.execute("DELETE FROM kreativ_eintrag WHERE id=?", (eintrag_id,))
+        self._sitzung_beruehrt(e["sitzung_id"])
+        self._db.commit()
+
+    def kreativ_punkt(self, eintrag_id: int, delta: int = 1) -> dict:
+        """Bewertung mit Klebepunkten: +1 / −1 (nie unter 0)."""
+        e = self._eintrag(eintrag_id)
+        return self.kreativ_eintrag_aendern(eintrag_id, punkte=max(0, e["punkte"] + delta))
+
+    def feld_635_setzen(self, sitzung_id: int, blatt: int, runde: int, spalte: int, text: str) -> dict | None:
+        """Ein Feld im 6-3-5-Formular füllen; leerer Text leert das Feld."""
+        from . import kreativ
+        s = self.objekt("kreativ", sitzung_id)
+        if s["methode"] != "635":
+            raise ProjektFehler(f"{s['nr']} ist keine 6-3-5-Sitzung.")
+        try:
+            kreativ.schreiber(blatt, runde, s["teilnehmer"])
+        except kreativ.KreativFehler as exc:
+            raise ProjektFehler(str(exc)) from exc
+        if not 1 <= spalte <= kreativ.IDEEN_JE_RUNDE:
+            raise ProjektFehler(f"Je Runde gibt es {kreativ.IDEEN_JE_RUNDE} Ideen.")
+        alt = self._db.execute("SELECT id FROM kreativ_eintrag WHERE sitzung_id=? AND blatt=? AND runde=? AND spalte=?",
+                               (sitzung_id, blatt, runde, spalte)).fetchone()
+        text = text.strip()
+        if alt and not text:
+            self._db.execute("DELETE FROM kreativ_eintrag WHERE id=?", (alt[0],))
+            ergebnis = None
+        elif alt:
+            self._db.execute("UPDATE kreativ_eintrag SET text=? WHERE id=?", (text, alt[0]))
+            ergebnis = self._eintrag(alt[0])
+        elif text:
+            cur = self._db.execute("INSERT INTO kreativ_eintrag(sitzung_id, text, blatt, runde, spalte, erstellt) "
+                                   "VALUES(?,?,?,?,?,?)", (sitzung_id, text, blatt, runde, spalte, _jetzt()))
+            ergebnis = self._eintrag(cur.lastrowid)
+        else:
+            return None
+        self._sitzung_beruehrt(sitzung_id)
+        self._db.commit()
+        return ergebnis
+
+    def blatt_635(self, sitzung_id: int, blatt: int) -> dict[tuple[int, int], dict]:
+        """Ein 6-3-5-Blatt: (Runde, Spalte) → Beitrag."""
+        return {(e["runde"], e["spalte"]): e for e in self.kreativ_eintraege(sitzung_id) if e["blatt"] == blatt}
+
+    def kreativ_als_idee(self, eintrag_id: int) -> dict:
+        """Beitrag als eigene Idee (I-…) übernehmen – mit Herkunft und Verknüpfung zur Sitzung."""
+        from . import kreativ
+        e = self._eintrag(eintrag_id)
+        if e["idee_id"] and self._db.execute("SELECT 1 FROM idee WHERE id=?", (e["idee_id"],)).fetchone():
+            raise ProjektFehler(f"Dieser Beitrag ist schon {self.objekt('idee', e['idee_id'])['nr']}.")
+        s = self.objekt("kreativ", e["sitzung_id"])
+        titel_ = e["text"] if len(e["text"]) <= 80 else e["text"][:77].rstrip() + " …"
+        i = self.objekt_neu("idee", titel=titel_,
+                            beschreibung=f"{e['text']}\n\nHerkunft: {s['nr']} {s['titel']} "
+                                         f"({kreativ.methode_name(s['methode'])})")
+        self.verknuepfen("kreativ", s["id"], "idee", i["id"])
+        self._db.execute("UPDATE kreativ_eintrag SET idee_id=? WHERE id=?", (i["id"], eintrag_id))
+        self._protokollieren("kreativ", s["id"], f"Beitrag als {i['nr']} übernommen")
+        self._db.commit()
+        return i
+
+    def kreativ_als_loesung(self, eintrag_id: int, funktion_id: int) -> int:
+        """Beitrag als Lösungsweg einer Teilfunktion in den morphologischen Kasten übernehmen."""
+        e = self._eintrag(eintrag_id)
+        s = self.objekt("kreativ", e["sitzung_id"])
+        f = self.objekt("funktion", funktion_id)
+        lid = self.loesung_neu(funktion_id, f"{e['text']} ({s['nr']})")
+        self._db.execute("UPDATE kreativ_eintrag SET loesung_id=? WHERE id=?", (lid, eintrag_id))
+        self._protokollieren("kreativ", s["id"], f"Beitrag als Lösungsweg für {f['nr']} {f['name']} übernommen")
+        self._db.commit()
+        return lid
