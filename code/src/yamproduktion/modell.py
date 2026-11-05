@@ -16,7 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from .berechnungen import ARTEN
+from .berechnungen import ARTEN, formel
 from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
@@ -773,10 +773,22 @@ class Projekt:
         self._db.execute("DELETE FROM berechnung WHERE id=?", (id_,))
         self._db.commit()
 
+    def formel_speichern(self, eingaben: "formel.FormelEingaben") -> GespeicherteBerechnung:
+        """S20: Berechnung aus einer Buchformel speichern; die Fundstelle steht als Quelle in der Berechnung."""
+        from dataclasses import asdict
+        try:
+            ergebnis = formel.berechne(eingaben)
+        except ValueError as exc:
+            raise ProjektFehler(str(exc)) from exc
+        return self.berechnung_speichern(ergebnis.als_dict(), asdict(eingaben))
+
     def berechnung_neu_rechnen(self, id_: int) -> GespeicherteBerechnung:
         """Rechnet mit den aktuellen Werten der verknüpften Anforderungen neu (neue Version)."""
         b = self.berechnung(id_)
         art = ARTEN.get(b.typ)
+        if b.typ == formel.TYP:           # Formel aus Buch (S20): Hauptergebnis ist die linke Seite
+            art = {"berechne": formel.berechne, "eingaben": formel.FormelEingaben, "feld_einheiten": {},
+                   "hauptergebnis": b.ergebnis["ergebnisse"][0]["symbol"]}
         if art is None:
             raise ProjektFehler(f"Die Berechnungsart „{b.typ}“ ist unbekannt.")
         eingaben = dict(b.eingaben)

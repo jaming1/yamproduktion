@@ -28,6 +28,7 @@ from .konzept_seiten import FunktionenSeite, IdeenSeite, KonzeptSeite
 from .rechen_seite import RechenSeite
 from .seiten import AnforderungenSeite, NeuesProjektDialog, UebersichtSeite, WillkommenSeite
 from .werkstoff_seite import WerkstoffSeite
+from .wissen_seite import WissenSeite
 from .zeichnung_seite import ZeichnungSeite
 
 # (Text, Schlüssel); Schlüssel None = Gruppenüberschrift (nicht wählbar)
@@ -76,6 +77,8 @@ NAVIGATION = [
     ("PROJEKTMANAGEMENT", None),
     ("   Aufgaben & Zeitplan", "aufgaben"),
     ("   Kosten Plan/Ist", "budget"),
+    ("WISSEN", None),
+    ("   Bibliothek", "bibliothek"),
     ("Werkstoffe", "werkstoffe"),
 ]
 RECHENSEITEN = {"rotor": "rotorauslegung", "ertrag": "ertrag", "lasten": "lasten_iec", "antrieb": "antrieb",
@@ -112,6 +115,7 @@ class Hauptfenster(QMainWindow):
         self.doku = DokuSeite()
         self.aufgaben = AufgabenSeite()
         self.budget = BudgetSeite()
+        self.bibliothek = WissenSeite(self.einst)
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -127,7 +131,7 @@ class Hauptfenster(QMainWindow):
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
                        "aufgaben": self.aufgaben, "budget": self.budget,
-                       **self.rechenseiten}
+                       "bibliothek": self.bibliothek, **self.rechenseiten}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
 
@@ -223,6 +227,8 @@ class Hauptfenster(QMainWindow):
         for q in (*self.qseiten.values(), self.aufgaben, self.budget):
             q.gespeichert.connect(self.uebersicht.aktualisieren)
         self.aufgaben.gehe_zu_objekt.connect(self.gehe_zu_objekt)
+        self.bibliothek.gespeichert.connect(lambda: self.berechnungen.laden())
+        self.bibliothek.gespeichert.connect(self.uebersicht.aktualisieren)
         self.kosten.arbeitsplan_oeffnen.connect(self.arbeitsplan_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.berechnungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
@@ -237,7 +243,7 @@ class Hauptfenster(QMainWindow):
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
                 self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
                 self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku,
-                self.aufgaben, self.budget)
+                self.aufgaben, self.budget, self.bibliothek)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -332,7 +338,8 @@ class Hauptfenster(QMainWindow):
         elif schluessel == "modellieren":
             self.modellieren.laden()
         elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
-                            "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku", "aufgaben", "budget"):
+                            "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku", "aufgaben", "budget",
+                            "bibliothek"):
             self.seiten[schluessel].laden()
         elif schluessel in RECHENSEITEN and self.projekt:
             self.seiten[schluessel]._verknuepfung_zeigen()

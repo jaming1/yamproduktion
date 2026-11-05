@@ -93,3 +93,11 @@
 - **Erkenntnis Darstellung:** Eine Knopfleiste mit sieben langen Beschriftungen macht die ganze Seite breiter als das Fenster. Kurze Beschriftungen, Erklärung als Tooltip.
 - **Erkenntnis:** Beträge wie „1 350,00“ und „1200.5“ müssen beide lesbar sein – Punkt nur dann als Tausendertrenner werten, wenn ein Komma folgt.
 - **Für den Skill:** Bei langen Seiten auch den unteren Teil (hier das Gantt) als eigenen Screenshot prüfen.
+
+## MS14 (05.11.2026)
+- **Gut:** SQLite FTS5 war schon da – Suche mit Ausschnitt, Rangfolge und Umlaut-Toleranz ohne neue Abhängigkeit.
+- **Gut:** Formeln aus Büchern werden mit einem geprüften Syntaxbaum statt `eval()` gerechnet, Pint rechnet die Einheiten mit – „N + m“ fällt sofort auf.
+- **Erkenntnis Fachlich:** Gedruckte Seitenzahl und PDF-Seite weichen in Scans fast immer ab (Titelei, Vorwort). Ohne Seitenversatz zeigt jede Quellenangabe auf die falsche Seite.
+- **Erkenntnis Darstellung:** PDF-Seiten haben einen durchsichtigen Hintergrund – im Dunkelmodus erst auf weißes Papier zeichnen, sonst ist schwarzer Text auf Schwarz.
+- **Erkenntnis:** Eine Frage muss als „Vorschlag, nicht geprüft“ erscheinen und immer auf die Seite zeigen – die Antwort ist die Fundstelle, nicht ein erfundener Satz.
+- **Für den Skill:** In Shell-Befehlen nie eine Variable benutzen, die in diesem Aufruf nicht gesetzt ist (`cat > $S/x` wartete ohne `S` auf Eingabe).

@@ -142,3 +142,11 @@
 - **Phasentore P5–P9** freigeschaltet: Freigabe mit Prüfungen (Bauteil, Arbeitsplan, Montageplan, abgenommene Inbetriebnahme, Wartungsplan) und ohne offene Aufgaben der Phase; Übersicht öffnet alle Phasen
 - Dateiformat Version 10
 - 141 automatische Tests (4 neu) und Screenshots hell/dunkel
+
+## 05.11.2026 – MS14 Wissensbasis ✅ (Version 0.14.0)
+- Neue Seite **Bibliothek** (Seitenleiste › Wissen): gescannte Bücher als PDF oder Seitenfotos hinzufügen; die Kopie liegt in einem eigenen Ordner (Standard `~/Documents/YamProduktion/Bibliothek`), nie in der Projektdatei oder einem Export
+- **Texterkennung** für Scans ohne Text: OCRmyPDF (macht das PDF durchsuchbar) oder Tesseract, Deutsch + Englisch, im Hintergrund mit Fortschritt; ohne installiertes Werkzeug wird das Buch trotzdem übernommen und ein Hinweis zur Installation gezeigt
+- **Volltextsuche** (SQLite FTS5) über alle Bücher: Wortanfänge, Umlaute egal, „…“ für Wortgruppen; Treffer mit **Buch · Kapitel · Seite** und Ausschnitt; Klick öffnet die Seite mit markierten Fundwörtern; Seitenversatz je Buch (gedruckte Seite ↔ PDF-Seite)
+- **Fragen** in normaler Sprache: Stichwörter ohne Füllwörter, die besten Fundstellen, deutlich als „Vorschlag, nicht geprüft“ gekennzeichnet
+- **Formel als Berechnung übernehmen**: Formel aus der markierten Buchstelle, Werte mit Einheiten (Pint), Ergebnis-Einheit, Rechenweg; gespeichert als B-00x mit der Fundstelle als Quelle und Hinweis „Formel aus Buch – prüfen“; neu rechnen möglich
+- 150 automatische Tests (9 neu) und Screenshots hell/dunkel

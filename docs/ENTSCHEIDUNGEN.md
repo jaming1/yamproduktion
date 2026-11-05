@@ -32,6 +32,9 @@
 | E30 | 05.11.2026 | Aufgaben sind Querschnittsobjekte (AU-…): die Phase ist ein Feld der Aufgabe; Anlegen oder Ändern öffnet kein Phasentor, offene Aufgaben verhindern aber die Freigabe ihrer Phase | Eine Aufgabe ist Planung, kein Ergebnis – sie darf eine freigegebene Phase nicht zurücksetzen, aber eine unfertige nicht als fertig durchgehen lassen | ✅ |
 | E31 | 05.11.2026 | Fortschritt je Phase = Anteil erledigter Aufgaben und geprüfter/freigegebener Objekte; freigegebene Phase = 100 % | Einfach nachvollziehbar und ohne Schätzung von Aufwänden; Gewichtung nach Aufwand wäre Scheingenauigkeit | ✅ |
 | E32 | 05.11.2026 | Kostenposten Plan/Ist im Projekt (Metadaten) statt als eigene Objekte; Plan aus der Kalkulation je Baugruppe wird ersetzt, nicht addiert | Kostenposten brauchen keine Versionen und Rückverfolgung; erneutes Übernehmen nach Preisänderung darf nicht doppelt zählen | ✅ |
+| E33 | 05.11.2026 | Bibliothek in eigenem Ordner mit eigener SQLite-Datei (FTS5), getrennt von allen Projekten; Kopie des Scans statt Verweis | Bücher gehören zu Yamine, nicht zu einem Projekt; urheberrechtlich geschützte Scans dürfen nie in Projektdatei, Doku-PDF oder Export gelangen (M52); Kopie bleibt gültig, auch wenn das Original verschoben wird | ✅ |
+| E34 | 05.11.2026 | Texterkennung mit OCRmyPDF, sonst Tesseract je Seite; beides über Homebrew, nicht mitgeliefert | Kostenlos und offline; ohne Werkzeug wird das Buch trotzdem übernommen (lesbar, nicht durchsuchbar) statt abgewiesen | ✅ |
+| E35 | 05.11.2026 | Fragen offline über Stichwörter und Fundstellen; KI-Antworten (Claude-API) vorerst nicht eingebaut | Kein Text verlässt den Mac (N2, N3), keine laufenden Kosten; eine Antwort mit Fundstelle ist nachprüfbar. Optional später: nur markierte Auszüge auf Knopfdruck an die API | ✅ |
 | E29 | 04.11.2026 | Technische Dokumentation wird aus den vorhandenen Einzel-PDFs zusammengesetzt (pypdf, neue kleine Abhängigkeit) statt neu gesetzt | Jedes Kapitel sieht aus wie sein Einzeldruck; fehlerhafte Kapitel verhindern das Paket nicht und stehen im Inhaltsverzeichnis | ✅ |
 | E19 | 04.11.2026 | Normteile mit vereinfachter Geometrie (kein Gewinde, Lager als Vollring × 0,62 für die Masse); Maße als „Norm, ungeprüft“ markiert | Reicht für Ansicht, Masse und Stückliste; die Werte stehen sichtbar als ungeprüft in Stückliste und Programm, bis sie mit Katalog/Tabellenbuch abgeglichen sind | ✅ |
 
@@ -50,7 +53,7 @@
 | PDF-Protokolle | **ReportLab** | Schlank, keine Abhängigkeit von Browser-Engines | WeasyPrint (mehr Abhängigkeiten) |
 | Texterkennung | **OCRmyPDF + Tesseract (Deutsch)** | Kostenlos, offline, macht Scans durchsuchbar | Cloud-OCR (Kosten, Datenschutz, Urheberrecht) |
 | Suche | **SQLite FTS5** | Volltextsuche im selben Datenbank-System, schnell, offline | Elasticsearch (viel zu groß) |
-| KI-Assistent (optional, S19) | Wird in MS14 entschieden (lokales Modell oder Claude-API mit Auszügen nur auf Anfrage) | Datenschutz und Urheberrecht zuerst prüfen | – |
+| KI-Assistent (optional, S19) | In MS14: offline über Stichwörter und Fundstellen (E35); Claude-API mit Auszügen nur auf Anfrage bleibt möglich | Datenschutz und Urheberrecht zuerst | – |
 | Tests | **pytest** + Screenshot-Tests der Oberfläche (hell/dunkel) | Rechenbeispiele aus der Literatur als feste Testfälle (N5) | – |
 | Auslieferung | **PyInstaller → .app** + Startskript `start.command` für die Entwicklung | Doppelklick-Start auf dem Mac | – |
 

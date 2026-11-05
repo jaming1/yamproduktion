@@ -65,7 +65,7 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 |----|-------------|----------|---------------|--------|-------|
 | MS12 | **Qualität, Sicherheit & Normen** | Prüfmerkmale aus Zeichnung → Prüfplan; Konstruktions- und Prozess-FMEA; Abweichungen & Maßnahmen; Risikobeurteilung (EN ISO 12100); Normen-Checkliste; **technische Dokumentation als PDF-Paket**. | M43–M47, S15, S16 | ✅ (Grenzmaße ISO 286/2768 und Normenliste aus dem Gedächtnis, als ungeprüft markiert; Vorlagen-Bewertungen in FMEA und Risikobeurteilung sind Schätzwerte; ersetzt keine Konformitätsbewertung durch eine Fachperson) | 04.11.2026 |
 | MS13 | **Projektmanagement** | Aufgaben, Meilensteine, Fortschritt je Phase, Gantt-Ansicht, Kosten Plan/Ist. | M48, M49, S17, S18 | ✅ (Dauern der Zeitplan-Vorlage und Plan aus der Kalkulation sind Schätzwerte; Phasentore P5–P9 dazu freigeschaltet) | 05.11.2026 |
-| MS14 | **Wissensbasis** | Buchscans importieren, Texterkennung, lokale Volltextsuche mit Buch/Seite; aus Buchstelle eine Berechnung anlegen; optional KI-Fragen (als „Vorschlag“ gekennzeichnet). | M50–M52, S19, S20, N2, N3 | ⏳ | |
+| MS14 | **Wissensbasis** | Buchscans importieren, Texterkennung, lokale Volltextsuche mit Buch/Seite; aus Buchstelle eine Berechnung anlegen; optional KI-Fragen (als „Vorschlag“ gekennzeichnet). | M50–M52, S19, S20, N2, N3 | ✅ (Fragen offline über Stichwörter mit Fundstellen, als „Vorschlag, nicht geprüft“; KI-Antworten bewusst noch nicht – siehe E35) | 05.11.2026 |
 
 ### Etappe F – Abnahme
 

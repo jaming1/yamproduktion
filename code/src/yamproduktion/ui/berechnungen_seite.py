@@ -105,7 +105,8 @@ class BerechnungenSeite(QWidget):
             if b.id == auswahl_id:
                 neue_zeile = zeile
             haupt = ARTEN.get(b.typ, {}).get("hauptergebnis")
-            g = next((x for x in b.ergebnis["ergebnisse"] if x["symbol"] == haupt), None)
+            g = next((x for x in b.ergebnis["ergebnisse"] if x["symbol"] == haupt),
+                     b.ergebnis["ergebnisse"][0] if b.ergebnis["ergebnisse"] and not haupt else None)
             werte = [
                 b.nr, b.titel,
                 f"{g['symbol']} = {formatiere(g['wert'])} {g['einheit']}" if g else "–",
