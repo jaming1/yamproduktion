@@ -164,3 +164,13 @@
 - **Yamaktaba als Archiv**: „In Yamaktaba archivieren“ (Ablage und Abnahme) legt Projekt-ZIP und Unterlagen ab, PDFs werden durchsuchbare Bücher in „99 Projekte & Medien“ und in der Sammlung „YamProduktion: <Projekt>“; doppelte PDFs werden erkannt
 - Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
 - 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel
+
+## Unveröffentlicht
+
+### K3 Rotorblatt nach Blattelementmethode
+- Neue Berechnung **Rotorblatt (BEM)** unter Windkraft: Blatttiefe und Verwindung je Blattelement nach Schmitz, danach Nachrechnung mit der Blattelementmethode (Prandtl-Spitzenverlust, Profilwiderstand, Korrektur nach Buhl für hoch belastete Ringe, sichere Lösung nach Ning)
+- Ergebnis: cp, Leistung, Drehmoment, Schub, Drehzahl, Blattform-Tabelle für die Fertigung, cp-Kennlinie über der Schnelllaufzahl, Reynoldszahl bei 0,7·R; PDF-Protokoll mit Rechenweg und Quellen
+- Prüft, ob das Blatt den cp der Rotorauslegung erreicht; übernimmt D, λ, v, ρ und cp aus der gespeicherten Rotorauslegung (Rückverfolgung, „neu prüfen“ bei Änderung)
+- Profilwerte (cA, α, Gleitzahl, cA,max) und die vereinfachte Polare sind sichtbar als **unbelegt** markiert
+- Prüfung: ohne Widerstand und Spitzenverlust erreicht das Schmitz-Blatt das Glauert-Optimum auf 1 % (λ = 4, 6, 8)
+- 16 neue Tests, Screenshots 110–117 hell/dunkel
