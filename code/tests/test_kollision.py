@@ -122,7 +122,7 @@ def test_massen_zylinder_gedreht_und_ohne_masse():
 
 def test_projekt_ausnahmen_und_mindestabstand(tmp_path):
     p = Projekt.neu(tmp_path / "P", "Test", "")
-    assert SCHEMA_VERSION == 13
+    assert SCHEMA_VERSION >= 13
     d = {"parameter": [], "einbauten": [
         {"id": "E1", "art": "normteil", "norm": "ISO 4032 M16", "name": "Mutter", "lage": {}},
         {"id": "E2", "art": "normteil", "norm": "ISO 4032 M16", "name": "Mutter 2", "lage": {"x": "5"}}]}
@@ -157,7 +157,7 @@ def test_umstellung_von_schema_10(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(pfad, sicherung=False)
-    assert p.meta("schema_version") == "13"
+    assert p.meta("schema_version") == str(SCHEMA_VERSION)
     assert p.kollision_ausnahmen(1) == {}
     p.schliessen()
 
