@@ -44,19 +44,21 @@ def test_welle_drehen_zwei_aufspannungen():
     # Schruppen: Ø95 → 90,6 (Aufmaß 0,3) bis zur Teilungsstelle in der Mitte des Ø90 (z = 550 → 293 mm)
     i = s.index("G0 X90.6")
     assert s[i + 1] == "G1 Z-293 F0.25"
-    # Ø80,6 endet am Kegel/Absatz vor Ø90: Absatz bei w = 107,5 (Fase 1,5 mm) → bei Ø80,6 genau 106
-    assert s[s.index("G0 X80.6") + 1] == "G1 Z-106"                 # F ist modal
-    # Schlichtkontur von der Stirnfase bis zum Ø90
-    assert "G1 X70 Z-1.5" in s and "G1 X90 Z-107.5" in s and "G1 X90 Z-293" in s
+    # Ø80,6 endet vor der Planschulter des Ø90 (w = 106) mit 0,3 mm axialem Schlichtaufmaß; F ist modal
+    assert s[s.index("G0 X80.6") + 1] == "G1 Z-105.7"
+    # Schlichtkontur: Stirnfase, Planschulter senkrecht (w = 80 bzw. 106), Fase 1,5 × 45° am größeren Ø
+    i = s.index("G1 X70 Z-80")
+    assert s[i + 1:i + 3] == ["G1 X77 Z-80.001", "G1 X80 Z-81.499"]
+    assert "G1 X87 Z-106.001" in s and "G1 X90 Z-293" in s
     # Drehzahl Schruppen: v_c 160 m/min an Ø95 (Vergütungsstahl), konstant G97
     n = round(S.drehzahl(160, 95, S.N_MAX_DREHEN))
     assert f"G97 S{n} M3" in s and "G95" in s
     # Schlanke Welle: Zentrierbohrung vor dem Schruppen, Halt zum Anstellen des Reitstocks
-    assert s.index("T0303") < s.index("G0 X90.6") and "M0" in s
+    assert s.index("T3 D1") < s.index("G0 X90.6") and s.index("M9") < s.index("M0")
     assert any("Reitstock" in w for w in d1.warnungen)
     # Aufspannung 2 von der anderen Stirnseite: Ø75 und Ø80
     s2 = _saetze(d2.text)
-    assert "G1 X75 Z-1.5" in s2 and "G1 X75 Z-100" in s2 and "G1 X80 Z-101.5" in s2
+    assert "G1 X75 Z-1.5" in s2 and "G1 X75 Z-100" in s2 and "G1 X77 Z-100.001" in s2
     assert "G1 Z-550 F0.25" in s2                        # Ø90,6 bis zur Teilungsstelle
     # Prüfer: Hauptzeit in der Größenordnung des Arbeitsplans (Längsdrehen + Plandrehen)
     kalk = A.kalkulieren(plan)
@@ -72,8 +74,8 @@ def test_passfedernut():
     # Nut 20 × 90 (DIN 6885 für Ø75: t1 = 7,5), Enden bei z = 15 und 85; Fräser Ø20, eine Zustellung (≤ 0,5 D)
     n = S.drehzahl(140, 20, S.N_MAX_FRAESEN)
     vf = round(0.10 * 4 * n)
-    assert "T1 M6" in s and f"G97 S{round(n)} M3" in s
-    assert "G0 X15 Y0" in s and f"G1 Z-7.5 F{round(vf / 2)}" in s and f"G1 X85 F{vf}" in s
+    assert s[s.index("T1 M6") + 1] == "D1" and f"S{round(n)} M3" in s and "G97" not in nut.text
+    assert "G0 X15 Y0" in s and f"G1 Z-7.5 F{round(0.3 * vf)}" in s and f"G1 X85 F{vf}" in s
     assert "G17 G21 G40 G49 G80 G90 G94" in s
     pr = cam.pruefen(nut.text, "fraesen")
     assert pr.ok and abs(pr.weg_vorschub - (2 + 7.5 + 70)) < 1e-6      # Eintauchen ab Sicherheitsabstand
@@ -87,7 +89,7 @@ def test_flansch_bohrbild_und_ausdrehen():
     assert [x.schluessel for x in progs] == ["drehen_1", "drehen_2", "bohren_1"]
     d1 = progs[0]
     # Ronde ist innen vorgebrannt → kein Bohrer, Bohrstange ab Ø380,4
-    assert "T0404" not in d1.text and "T0505" in d1.text
+    assert "T4 D1" not in d1.text and "T5 D1" in d1.text
     b = progs[-1]
     pr = cam.pruefen(b.text, "fraesen")
     assert pr.ok, pr.fehler
@@ -211,3 +213,47 @@ def test_altes_projekt_bekommt_tabelle(tmp_path):
     projekt.schliessen()
     p = Projekt.oeffnen(projekt.pfad)
     assert p.meta("schema_version") == "14" and p._db.execute("SELECT COUNT(*) FROM ncprogramm").fetchone()[0] == 0
+
+
+def test_querbohrung_ist_keine_nut_und_zwei_nuten():
+    p = V.WelleParameter()
+    form = V.erzeuge_welle(p)
+    quer = form
+    for z in (200, 300):                                 # zwei radiale Sackbohrungen Ø10 im Lagersitz Ø80
+        quer = G.abziehen(quer, V._radialer_zylinder(10, 40 - 10, 12, z))
+    plan = A.vorschlag(quer, p.werkstoff, "W", "welle")
+    progs = cam.erzeugen(quer, plan)
+    nut = next(x for x in progs if x.schluessel == "fraesen_nut")
+    assert "X200" not in nut.text and "Nut 10" not in nut.text            # kein Schlitz durch den Lagersitz
+    assert sum("Querbohrung Ø10" in w for w in progs[0].warnungen) == 2
+    # zweite Nut auf dem Ø70: Z0 auf dem Ø75, die Nut im Ø70 liegt 2,5 mm tiefer → Grund bei Z-10
+    zwei = G.abziehen(form, V.passfedernut(70, 60, 803))
+    nut = next(x for x in cam.erzeugen(zwei, A.vorschlag(zwei, p.werkstoff, "W", "welle"))
+               if x.schluessel == "fraesen_nut")
+    s = _saetze(nut.text)
+    assert s.count("T1 M6") == 1 and "T2 M6" not in s                   # gleiche Breite, ein Werkzeug
+    assert "G1 Z-7.5" in " ".join(s) and any(z.startswith("G1 Z-10 ") or z == "G1 Z-10" for z in s)
+    assert cam.pruefen(nut.text, "fraesen").ok
+
+
+def test_werkzeugwechsel_je_steuerung_und_pruefer_reihenfolge():
+    form, plan = _welle()
+    for dialekt, dreh, fraes in (("din", "T1 D1", ["T1 M6", "D1"]), ("fanuc", "T0101", ["T1 M6", "G43 H1"]),
+                                 ("linuxcnc", "T1 M6 G43", ["T1 M6", "G43 H1"])):
+        d1, _, nut = cam.erzeugen(form, plan, {"dialekt": dialekt})
+        assert dreh in _saetze(d1.text)
+        s = _saetze(nut.text)
+        assert s[s.index(fraes[0]) + 1] == fraes[1]
+    fanuc = cam.erzeugen(form, plan, {"dialekt": "fanuc", "programmnummer": 9999})
+    assert fanuc[0].zeilen[1].startswith("O9999") and fanuc[1].zeilen[1].startswith("O0001")
+    assert " G90" not in _saetze(fanuc[0].text)[0]                    # G90 wäre bei Fanuc-Drehen ein Zyklus
+    assert cam.Einstellungen.aus_dict({"kuehlung": "false"}).kuehlung is False
+    # M3 vor S im selben Satz ist gültig; Kommentar mit Semikolon ist kein Fehler
+    ok = cam.pruefen("(a;b)\nG0 X0 Y0 Z5\nM3 S1000\nG1 Z-1 F100\nG0 Z5\nM30\n", "fraesen")
+    assert ok.ok, ok.fehler
+    # Drehen: Eilgang ins Rohteil wird erkannt, Eilgang zurück in die eigene Bohrung nicht
+    t = "G0 X0 Z2\nG95 G97 S500 M3\nG1 Z-20 F0.1\nG0 Z2\nG0 Z-19.5\nG0 Z2\nG0 X40 Z-50\nM30\n"
+    pr = cam.pruefen(t, "drehen", rohteil_d=100)
+    assert len(pr.fehler) == 1 and "X40 Z-50" in pr.fehler[0]
+    # G95 beim Fräsen: Vorschub je Umdrehung
+    assert abs(cam.pruefen("G0 X0 Y0 Z1\nG95 S1000 M3\nG1 Z-9 F0.1\nM30\n", "fraesen").zeit - 10 / 100) < 1e-9

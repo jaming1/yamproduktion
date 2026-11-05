@@ -385,7 +385,7 @@ class CamSeite(QWidget):
             self.fehler_text = str(exc) or exc.__class__.__name__
         for prog in self.programme:
             try:
-                self.pruefungen[prog.schluessel] = cam.pruefen(prog.text, prog.art)
+                self.pruefungen[prog.schluessel] = cam.pruefen(prog.text, prog.art, getattr(prog, "rohteil_d", None))
             except (cam.CamFehler, ValueError) as exc:
                 self.pruefungen[prog.schluessel] = cam.Pruefung(
                     fehler=[f"Prüfung nicht möglich: {exc}"], hinweise=[], segmente=[],

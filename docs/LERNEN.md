@@ -121,4 +121,5 @@
 - **Erkenntnis Fachlich:** Ein Schruppschnitt auf genau dem Zieldurchmesser eines Absatzes muss bis zum *nächsten größeren* Absatz laufen – mit „≥“ statt „>“ bleibt der ganze Absatz stehen.
 - **Erkenntnis Fachlich:** Ob eine Bohrung durchgeht, verrät die Hüllbox nicht (Flansch mit Rohrstutzen). Ein Punkt 0,5 mm hinter dem Bohrungsgrund im Volumenmodell klärt es sicher.
 - **Erkenntnis:** Steuerungen unterscheiden sich schon im Vorschub je Umdrehung (G95 bzw. G99 bei Fanuc-Drehmaschinen) und bei O-Nummern (in LinuxCNC Unterprogramme) – ausgeschriebene G0/G1-Wege sind der kleinste gemeinsame Nenner.
-
+- **Gut:** Ein zweiter Agent als unabhängiger Prüfer hat zehn echte Fehler gefunden (u. a. Schultern als Kegel gedreht, Querbohrungen als Nut gefräst), die die eigenen Tests sogar festgeschrieben hatten. Bei Maschinencode immer gegen das Volumenmodell prüfen lassen, nicht gegen die eigene Erwartung.
+- **Erkenntnis Fachlich:** Die Lücke zwischen zwei Zylindern ist meist eine Planschulter mit Fase, kein Kegel – Kontur im Modell abtasten statt raten.
