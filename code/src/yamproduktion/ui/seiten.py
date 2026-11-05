@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, Signal, QStandardPaths
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFileDialog,
     QFormLayout, QFrame, QGridLayout, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
-    QPushButton, QScrollArea, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
+    QProgressBar, QPushButton, QScrollArea, QSplitter, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 from ..berechnungen.basis import formatiere
@@ -156,7 +156,8 @@ class UebersichtSeite(QWidget):
     gehe_zu_objekt = Signal(str, int)
     meldung = Signal(str, bool)
 
-    PHASE_ZIEL = {"P1": "ideen", "P2": "anforderungen", "P3": "konzept", "P4": "berechnungen", "P5": "bauteile"}
+    PHASE_ZIEL = {"P1": "ideen", "P2": "anforderungen", "P3": "konzept", "P4": "berechnungen", "P5": "bauteile",
+                  "P6": "arbeitsplaene", "P7": "montage", "P8": "inbetriebnahme", "P9": "wartung"}
 
     def __init__(self):
         super().__init__()
@@ -254,6 +255,13 @@ class UebersichtSeite(QWidget):
         was.setObjectName("Klein")
         was.setWordWrap(True)
         bl.addWidget(was)
+        f = self.projekt.phase_fortschritt(ph.nr)
+        balken = QProgressBar()
+        balken.setRange(0, 100)
+        balken.setValue(f["prozent"])
+        balken.setFormat(f"%p % · {f['erledigt']} von {f['gesamt']}")
+        balken.setToolTip("Erledigte Aufgaben und geprüfte/freigegebene Objekte der Phase")
+        bl.addWidget(balken)
         if ph.status == "freigegeben":
             datum = ph.freigegeben.replace("T", " ")[:16]
             d = QLabel(f"Freigegeben am {datum}")

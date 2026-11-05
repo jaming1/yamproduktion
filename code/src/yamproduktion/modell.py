@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -54,6 +54,7 @@ OBJEKTE = {
     "risiko":       ("RB", "name", "P5", "Risikobeurteilung"),
     "normen":       ("NL", "name", "P2", "Normen-Checkliste"),
     "abweichung":   ("QA", "name", "P6", "Abweichungsliste"),
+    "aufgabe":      ("AU", "titel", "", "Aufgabe"),          # Querschnitt: Phase steht in der Aufgabe
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -186,7 +187,14 @@ CREATE TABLE IF NOT EXISTS pruefplan (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, art TEXT NOT NULL DEFAULT '',
     name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{{}}',""" + _GEMEINSAM + """
 );
-""" for _t in ("fmea", "risiko", "normen", "abweichung")) + """CREATE TABLE IF NOT EXISTS bewertung (
+""" for _t in ("fmea", "risiko", "normen", "abweichung")) + """CREATE TABLE IF NOT EXISTS aufgabe (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
+    titel TEXT NOT NULL DEFAULT '', verantwortlich TEXT NOT NULL DEFAULT '', start TEXT NOT NULL DEFAULT '',
+    termin TEXT NOT NULL DEFAULT '', stand TEXT NOT NULL DEFAULT 'offen', phase TEXT NOT NULL DEFAULT '',
+    objekt_typ TEXT NOT NULL DEFAULT '', objekt_id INTEGER, meilenstein INTEGER NOT NULL DEFAULT 0,
+    kosten_plan REAL, kosten_ist REAL, notiz TEXT NOT NULL DEFAULT '',""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
     PRIMARY KEY (variante_id, kriterium_id)
 );
@@ -342,9 +350,10 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 9:
+        if von < 10:
             # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
-            # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen)
+            # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen;
+            # 10: Aufgaben)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -421,6 +430,8 @@ class Projekt:
         raise ProjektFehler(f"Phase {nr} gibt es nicht.")
 
     def _phase_in_arbeit(self, nr: str, grund: str = "") -> None:
+        if not nr:                                   # Querschnittsobjekte (Aufgaben) gehören zu keiner Phase
+            return
         alt = self.phase(nr)
         if alt.status == "in Arbeit":
             return
@@ -471,9 +482,43 @@ class Projekt:
                     hindernisse.append(f"{b.nr} muss neu berechnet werden.")
                 elif not b.erfuellt:
                     hindernisse.append(f"{b.nr}: mindestens eine Prüfung ist nicht erfüllt.")
-        if nr not in ("P1", "P2", "P3", "P4"):
-            hindernisse.append("Diese Phase wird in einem späteren Meilenstein freigeschaltet.")
+        elif nr == "P5":
+            if not self.teile():
+                hindernisse.append("Es gibt noch kein Bauteil.")
+        elif nr == "P6":
+            if not self.liste("arbeitsplan"):
+                hindernisse.append("Es gibt noch keinen Arbeitsplan.")
+        elif nr == "P7":
+            if not self.liste("montageplan"):
+                hindernisse.append("Es gibt noch keinen Montageplan.")
+        elif nr == "P8":
+            from .betrieb import inbetriebnahme as IB
+            if not any(IB.auswerten(ib["daten"])["abgenommen"] for ib in self.inbetriebnahmen()):
+                hindernisse.append("Es gibt noch keine abgenommene Inbetriebnahme.")
+        elif nr == "P9":
+            if not self.liste("wartungsplan"):
+                hindernisse.append("Es gibt noch keinen Wartungsplan.")
+        for a in self.aufgaben(nr):
+            if a["stand"] != "erledigt":
+                hindernisse.append(f"{a['nr']} „{a['titel']}“ ist noch nicht erledigt.")
         return hindernisse
+
+    def phase_fortschritt(self, nr: str) -> dict:
+        """Fortschritt in % (M49): erledigte Aufgaben und geprüfte/freigegebene Objekte der Phase."""
+        from .planung.zeitplan import fortschritt
+        erledigt = gesamt = 0
+        for typ, ph in PHASE_VON_TYP.items():
+            if ph != nr:
+                continue
+            for (status,) in self._db.execute(f"SELECT status FROM {typ}").fetchall():
+                gesamt += 1
+                erledigt += status in ("geprüft", "freigegeben")
+        aufgaben = self.aufgaben(nr)
+        gesamt += len(aufgaben)
+        erledigt += sum(a["stand"] == "erledigt" for a in aufgaben)
+        frei = self.phase(nr).status == "freigegeben"
+        return {"prozent": fortschritt(erledigt, gesamt, frei), "erledigt": erledigt, "gesamt": gesamt,
+                "offene_aufgaben": [a for a in aufgaben if a["stand"] != "erledigt"]}
 
     def phase_freigeben(self, nr: str) -> Phase:
         hindernisse = self.phase_hindernisse(nr)
@@ -1250,6 +1295,83 @@ class Projekt:
                                beschreibung=f"Rückmeldung aus dem Betrieb{': ' + herkunft if herkunft else ''}. "
                                             "Für die nächste Version prüfen.")
 
+    # ================================================================ Projektmanagement (MS13)
+    _STAENDE = ("offen", "in Arbeit", "erledigt")
+
+    def _aufgabe_pruefen(self, felder: dict) -> dict:
+        from .betrieb.wartung import lesen
+        if "stand" in felder and felder["stand"] not in self._STAENDE:
+            raise ProjektFehler("Stand muss offen, in Arbeit oder erledigt sein.")
+        if felder.get("phase") and felder["phase"] not in dict(PHASEN):
+            raise ProjektFehler(f"Phase {felder['phase']} gibt es nicht.")
+        for k in ("start", "termin"):
+            if k in felder and felder[k]:
+                d = lesen(felder[k])
+                if d is None:
+                    raise ProjektFehler("Datum bitte als TT.MM.JJJJ eingeben.")
+                felder[k] = d.isoformat()
+        start, termin = felder.get("start"), felder.get("termin")
+        if start and termin and start > termin:
+            raise ProjektFehler("Der Start liegt nach dem Termin.")
+        return felder
+
+    def aufgabe_neu(self, titel_: str, **felder) -> dict:
+        """Aufgabe oder Meilenstein (M48): Verantwortlich, Start, Termin, Stand, Phase, Objekt, Kosten."""
+        if not titel_.strip():
+            raise ProjektFehler("Bitte der Aufgabe einen Titel geben.")
+        return self.objekt_neu("aufgabe", titel=titel_.strip(), **self._aufgabe_pruefen(felder))
+
+    def aufgabe(self, id_: int) -> dict:
+        return self.objekt("aufgabe", id_)
+
+    def aufgaben(self, phase: str | None = None) -> list[dict]:
+        wo, args = ("phase=?", (phase,)) if phase else ("", ())
+        liste = self.liste("aufgabe", wo, args)
+        return sorted(liste, key=lambda a: (a["start"] or a["termin"] or "9999", a["termin"] or "9999", a["nr"]))
+
+    def aufgabe_aendern(self, id_: int, **felder) -> dict:
+        alt = self.aufgabe(id_)
+        neu = self._aufgabe_pruefen(dict(felder))
+        pruef = {"start": alt["start"], "termin": alt["termin"], **neu}
+        if pruef["start"] and pruef["termin"] and pruef["start"] > pruef["termin"] and not alt["meilenstein"]:
+            raise ProjektFehler("Der Start liegt nach dem Termin.")
+        return self.objekt_aendern("aufgabe", id_, **neu)
+
+    def zeitplan_vorlage(self, start: str = "") -> list[dict]:
+        """Aufgaben und Meilensteine der Kleinwindanlage ab `start` anlegen (Dauern sind Schätzwerte)."""
+        from .betrieb.wartung import lesen
+        from .planung import zeitplan as Z
+        beginn = lesen(start) if start else datetime.now().date()
+        return [self.aufgabe_neu(a.pop("titel"), **a) for a in Z.vorlage_kwa(beginn)]
+
+    def kosten_posten(self) -> list[dict]:
+        return json.loads(self.meta("kosten", "[]") or "[]")
+
+    def kosten_speichern(self, posten: list[dict]) -> None:
+        self._setze_meta("kosten", json.dumps(posten, ensure_ascii=False))
+        self._db.commit()
+
+    def kosten_aus_kalkulation(self) -> tuple[list[dict], int]:
+        """Plan je Baugruppe aus der Kalkulation übernehmen; vorhandene Posten derselben Baugruppe werden ersetzt."""
+        from .planung import kosten as K
+        posten = self.kosten_posten()
+        n = 0
+        for g in self.baugruppen():
+            zeilen, _, _, _ = self.kalkulation_baugruppe(g["id"])
+            for art, text, plan, quelle in K.aus_kalkulation(g["nr"], g["name"], zeilen):
+                alt = next((p for p in posten if p["text"] == text), None)
+                if alt:
+                    alt.update(kostenart=art, plan=plan, quelle=quelle)
+                else:
+                    K.posten_neu(posten, art, text, plan, None, quelle)
+                n += 1
+        self.kosten_speichern(posten)
+        return posten, n
+
+    def kosten_uebersicht(self, posten: list[dict] | None = None) -> list[dict]:
+        from .planung import kosten as K
+        return K.uebersicht(self.kosten_posten() if posten is None else posten, self.aufgaben())
+
     # ================================================================ Qualität, Sicherheit & Normen (MS12)
     def _nachweise(self) -> dict[str, list[str]]:
         """Berechnungsart bzw. Objektart → Nummern, die als Nachweis gelten (neueste Berechnung je Art)."""
@@ -1511,13 +1633,17 @@ class Projekt:
         "risiko": {"art", "name", "daten"},
         "normen": {"art", "name", "daten"},
         "abweichung": {"art", "name", "daten"},
+        "aufgabe": {"titel", "verantwortlich", "start", "termin", "stand", "phase", "objekt_typ", "objekt_id",
+                    "meilenstein", "kosten_plan", "kosten_ist", "notiz"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
                    "verbessern": "Parameter verbessern", "verschlechtern": "Parameter verschlechtert sich",
                    "prinzip": "Prinzip", "text": "Text", "name": "Name", "eltern_id": "Einordnung",
                    "reihenfolge": "Reihenfolge", "art": "Art", "idee_id": "Idee", "widerspruch_id": "Widerspruch",
-                   "prinzipien": "Prinzipien"}
+                   "prinzipien": "Prinzipien", "verantwortlich": "Verantwortlich", "start": "Start",
+                   "termin": "Termin", "stand": "Stand", "phase": "Phase", "kosten_plan": "Kosten Plan",
+                   "kosten_ist": "Kosten Ist", "notiz": "Notiz", "meilenstein": "Meilenstein"}
 
     def _zeile(self, typ: str, zeile: sqlite3.Row | tuple | None, spalten: list[str]) -> dict | None:
         return dict(zip(spalten, zeile)) if zeile else None

@@ -86,3 +86,10 @@
 - **Erkenntnis:** Passmaße mit Komma (Ø13,5 H7) brauchen eine Trennung nur an „;“ oder „, “ – sonst wird die Zahl zerschnitten.
 - **Erkenntnis Darstellung:** Tabellenköpfe dürfen nicht abgeschnitten werden – Spaltenbreite mindestens so breit wie die Überschrift; bei breiten Tabellen die Ampel zusätzlich vorne in der Nummer zeigen.
 - **Für den Skill:** Interne Schlüssel (hier `lasten_iec`) beim Verknüpfen immer aus der Quelle lesen, nicht aus dem Seitennamen raten – der Test hat es gefunden.
+
+## MS13 (05.11.2026)
+- **Gut:** Aufgaben über das allgemeine Objektmodell (Nummer, Version, Verlauf) – nur die Phase musste „leer“ erlaubt werden; alles andere kam geschenkt.
+- **Erkenntnis Planung:** Parallele Aufgaben (Baugenehmigung, Netzanmeldung) dürfen den Nachfolger in der Vorlage nicht verschieben – sonst wartet die Konstruktion zwei Monate auf das Bauamt.
+- **Erkenntnis Darstellung:** Eine Knopfleiste mit sieben langen Beschriftungen macht die ganze Seite breiter als das Fenster. Kurze Beschriftungen, Erklärung als Tooltip.
+- **Erkenntnis:** Beträge wie „1 350,00“ und „1200.5“ müssen beide lesbar sein – Punkt nur dann als Tausendertrenner werten, wenn ein Komma folgt.
+- **Für den Skill:** Bei langen Seiten auch den unteren Teil (hier das Gantt) als eigenen Screenshot prüfen.

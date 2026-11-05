@@ -133,5 +133,5 @@ def test_arbeitsplan_im_projekt(tmp_path):
     pfad = p.pfad
     p.schliessen()
     p2 = Projekt.oeffnen(pfad)
-    assert p2.meta("schema_version") == "9"
+    assert p2.meta("schema_version") == "10"
     p2.schliessen()

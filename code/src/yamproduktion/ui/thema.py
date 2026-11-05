@@ -94,6 +94,9 @@ def anwenden(app: QApplication, modus: str) -> dict:
         QDoubleSpinBox {{ padding-left: 10px; }}
         QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{ width: 22px; border: none; background: transparent; }}
         QLineEdit:focus, QDoubleSpinBox:focus, QComboBox:focus {{ border-color: {f['akzent']}; }}
+        QProgressBar {{ border: 1px solid {f['linie']}; border-radius: 6px; background: {f['hintergrund']};
+                        text-align: center; color: {f['text']}; min-height: 18px; font-size: 13px; }}
+        QProgressBar::chunk {{ background: {f['akzent']}; border-radius: 5px; }}
         QLabel#Ok {{ background: {f['ok_bg']}; color: {f['ok']}; border-radius: 6px; padding: 6px 10px; }}
         QLabel#Fehler {{ background: {f['fehler_bg']}; color: {f['fehler']}; border-radius: 6px; padding: 6px 10px; }}
         QLabel#Gross {{ font-size: 30px; font-weight: 700; color: {f['akzent']}; }}

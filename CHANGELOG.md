@@ -134,3 +134,11 @@
 - PP-, FM-, RB-, NL-, QA-Nummern, verknüpft mit Teilen und Berechnungen (Änderung → „neu prüfen“); Dateiformat Version 9
 - 137 automatische Tests (4 neu) und Screenshots hell/dunkel
 
+## 05.11.2026 – MS13 Projektmanagement ✅ (Version 0.13.0)
+- Neue Seite **Aufgaben & Zeitplan**: Aufgaben und Meilensteine (AU-001 …) mit Verantwortlich, Start, Termin, Stand, Phase, Kosten Plan/Ist und verknüpftem Objekt; sofort gespeichert, überfällige Termine rot, Filter je Phase, Sprung zum Objekt
+- **Fortschritt je Phase** in % (erledigte Aufgaben und geprüfte/freigegebene Objekte) auf der Seite und in der Übersicht; nächster Meilenstein
+- **Zeitplan als Gantt** mit Heute-Linie und Meilenstein-Rauten; Vorlage „Kleinwindanlage“ mit 13 Aufgaben und 5 Meilensteinen (Dauern geschätzt); Zeitplan als PDF
+- Neue Seite **Kosten Plan/Ist**: Posten je Kostenart, Plan aus der Kalkulation, Kosten der Aufgaben, Abweichung (rot ab +10 %), als PDF
+- **Phasentore P5–P9** freigeschaltet: Freigabe mit Prüfungen (Bauteil, Arbeitsplan, Montageplan, abgenommene Inbetriebnahme, Wartungsplan) und ohne offene Aufgaben der Phase; Übersicht öffnet alle Phasen
+- Dateiformat Version 10
+- 141 automatische Tests (4 neu) und Screenshots hell/dunkel

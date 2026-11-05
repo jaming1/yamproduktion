@@ -2,7 +2,7 @@
 
 Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen, Berechnung, eigene CAD-Konstruktion, Fertigung und Montage bis zur Inbetriebnahme führt. Erstes Produkt: eine Mini-Windkraftanlage (5–10 kW).
 
-**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS12 fertig (zuletzt „Qualität, Sicherheit & Normen“, Version 0.12.0). Plan: `docs/03_PLAN.md`.
+**Aktueller Stand:** Phase 4 (Umsetzung) – Meilensteine MS1 bis MS13 fertig (zuletzt „Projektmanagement“, Version 0.13.0). Plan: `docs/03_PLAN.md`.
 
 ## Starten (Mac)
 
@@ -46,12 +46,14 @@ Ein Mac-Programm, das ein Maschinenbau-Produkt von der Idee über Anforderungen,
 25. **Risikobeurteilung**: nach EN ISO 12100 mit Grenzen der Maschine, 13 Gefährdungen der Kleinwindanlage (Rotor, Blattbruch, Eiswurf, Umsturz, Absturz bei Montage, Stromschlag …), Risiko S·W, Schutzmaßnahme in der Rangfolge konstruktiv → technisch → Benutzerinformation und Restrisiko. Das Restrisiko zählt erst, wenn „Umgesetzt“ auf „ja“ steht.
 26. **Normen**: Checkliste der relevanten Normen (u. a. IEC 61400-2, EN ISO 12100, Maschinenverordnung, VDI 2230, DIN 743) mit Status; vorhandene Berechnungen stehen als Nachweis drin. **Nachweise abgleichen** trägt neue Berechnungen nach. „Erfüllt“ setzt nur du.
 27. **Technische Doku**: zeigt, welche Kapitel vorhanden sind und welche fehlen. **PDF-Paket erstellen** legt alles in ein PDF mit Inhaltsverzeichnis und Lesezeichen: Lastenheft, Normen, Risikobeurteilung, FMEA, Berechnungen, Zeichnungen, Stücklisten, Prüfpläne, Montageanleitungen (mit 3D-Bildern), Abnahme, Wartung.
-28. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
-29. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen.
+28. **Aufgaben & Zeitplan** (Seitenleiste › Projektmanagement): oben der **Fortschritt je Phase** in % und der nächste Meilenstein. **Vorlage** legt den Zeitplan der Kleinwindanlage an (Aufgaben je Phase, Meilensteine wie „Konzept festgelegt“ und „Abnahme“, Dauern geschätzt). In der Tabelle Wer, Start, Termin, Stand, Phase, Kosten und ein verknüpftes Objekt (z. B. `T-001`) eintragen – alles wird sofort gespeichert; überfällige Termine sind rot. Unten der **Zeitplan als Gantt** (rote Linie = heute); als PDF druckbar. Offene Aufgaben einer Phase verhindern deren Freigabe.
+29. **Kosten Plan/Ist**: **Plan aus Kalkulation** übernimmt die Herstellkosten je Baugruppe; eigene Posten (Genehmigung, Prüfung, Werkzeuge …) mit Plan und Ist eintragen. Die Übersicht zeigt je Kostenart Plan, Ist und Abweichung (rot ab +10 %); als PDF.
+30. **Werkstoffe**: Nachschlagetabelle mit Streckgrenze, Zugfestigkeit, E-Modul und Dichte (Werte bitte mit dem Tabellenbuch abgleichen).
+31. Tastenkürzel: ⌘B Seitenleiste ein/aus · ⌘⇧D Hell/Dunkel · ⌘O Projekt öffnen · ⌘W Projekt schließen.
 
 Projekte aus MS1 und MS2 werden beim Öffnen automatisch auf das neue Format umgestellt (vorher wird gesichert).
 
-Beispiele (Berechnungsprotokolle Rotor, Ertrag, Lastannahmen, Turm, Schweißnaht, Getriebe, Produkt-Lastenheft, Hauptwelle als STEP, Zeichnungen Hauptwelle (PDF/DXF) und Gondel mit Stückliste, Arbeitsplan Hauptwelle, Kalkulation Gondel, Anfrage Fremdfertigung, Prüfprotokoll Hauptwelle, FMEA, Risikobeurteilung, Technische Dokumentation als Gesamt-PDF) liegen in `daten/beispiele/`.
+Beispiele (Berechnungsprotokolle Rotor, Ertrag, Lastannahmen, Turm, Schweißnaht, Getriebe, Produkt-Lastenheft, Hauptwelle als STEP, Zeichnungen Hauptwelle (PDF/DXF) und Gondel mit Stückliste, Arbeitsplan Hauptwelle, Kalkulation Gondel, Anfrage Fremdfertigung, Prüfprotokoll Hauptwelle, FMEA, Risikobeurteilung, Technische Dokumentation als Gesamt-PDF, Zeitplan, Kosten Plan/Ist) liegen in `daten/beispiele/`.
 
 **TRIZ-Daten:** Die Widerspruchsmatrix stammt aus einer geprüften, frei verfügbaren Abschrift (Quelle steht im Programm unter jeder Empfehlung). Bitte einige Zellen mit dem eigenen TRIZ-Buch vergleichen.
 

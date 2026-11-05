@@ -776,3 +776,83 @@ def deckblatt_erstellen(ziel: str | Path, projekt: str, kapitel: list[tuple[str,
                     "„Schätzwert“ oder „Norm, ungeprüft“ sind vor der Fertigung und der Konformitätserklärung zu "
                     "bestätigen. Rot markierte Kapitel fehlen noch.", "klein"))
     return _dokument(ziel, f"Technische Dokumentation {projekt}", inhalt)
+
+
+# ================================================================ Projektmanagement (MS13)
+def zeitplan_erstellen(aufgaben: list[dict], gantt_png: bytes, fortschritt: list, ziel: str | Path,
+                       projekt: str = "", heute=None, objekte: dict | None = None) -> Path:
+    """Zeitplan (S17): Gantt-Bild, Fortschritt je Phase (M49) und Aufgabenliste (M48), A4 quer."""
+    from .betrieb.wartung import anzeigen, lesen
+    from .planung import zeitplan as Z
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    zelle = ParagraphStyle("z", parent=s["text"], fontSize=8, leading=10)
+    heute = heute or datetime.now().date()
+    objekte = objekte or {}
+    inhalt = _kopf_betrieb(s, "Zeitplan", "", projekt, f"Stichtag {anzeigen(heute)}")
+    kopf = [Paragraph(f"<b>{nr}</b> {_x(name)}", zelle) for nr, name, _ in fortschritt]
+    inhalt.append(tabelle([kopf, [f"{p} %" for _, _, p in fortschritt]], [261 / len(fortschritt) * mm] * len(fortschritt)))
+    inhalt.append(Spacer(1, 3 * mm))
+    from io import BytesIO
+    from reportlab.lib.utils import ImageReader
+    bw, bh = ImageReader(BytesIO(gantt_png)).getSize()
+    inhalt.append(_bild(gantt_png, min(261, 130 * bw / bh)))        # höchstens 130 mm hoch
+    inhalt.append(P("Aufgaben und Meilensteine", "h2"))
+    daten = [[Paragraph(f"<b>{h}</b>", zelle) for h in ("Nr", "Aufgabe", "Phase", "Wer", "Zeitraum", "Stand",
+                                                         "Objekt", "Notiz")]]
+    stil = []
+    for i, a in enumerate(aufgaben, 1):
+        spaet = Z.verzug(a, heute)
+        daten.append([Paragraph(_x(a["nr"] + (" ◆" if a["meilenstein"] else "")), zelle),
+                      Paragraph(_x(a["titel"]), zelle), Paragraph(_x(a["phase"]), zelle),
+                      Paragraph(_x(a["verantwortlich"]), zelle), Paragraph(_x(Z.termin_text(a)), zelle),
+                      Paragraph(_x(a["stand"] + (f" ({spaet} Tage über Termin)" if spaet else "")), zelle),
+                      Paragraph(_x(objekte.get(a["id"], "")), zelle), Paragraph(_x(a["notiz"]), zelle)])
+        if spaet:
+            stil.append(("BACKGROUND", (5, i), (5, i), colors.HexColor(_AMPEL["rot"])))
+        elif a["stand"] == "erledigt":
+            stil.append(("BACKGROUND", (5, i), (5, i), colors.HexColor(_AMPEL["gruen"])))
+    t = tabelle(daten, [mm * w for w in (18, 78, 15, 25, 42, 30, 18, 35)])
+    t.setStyle(TableStyle(stil))
+    inhalt.append(t)
+    inhalt.append(Spacer(1, 3 * mm))
+    inhalt.append(P(_x(Z.HINWEIS), "klein"))
+    return _dokument(ziel, f"Zeitplan {projekt}", inhalt, quer=True)
+
+
+def kostenuebersicht_erstellen(posten: list[dict], uebersicht: list[dict], aufgaben: list[dict], ziel: str | Path,
+                               projekt: str = "") -> Path:
+    """Kostenübersicht Plan/Ist (S18) je Kostenart, mit allen Posten und Aufgaben mit Kosten."""
+    from .planung import kosten as K
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = _kopf_betrieb(s, "Kostenübersicht Plan/Ist", "", projekt)
+    daten = [["Kostenart", "Plan", "Ist", "Abweichung", "Ist/Plan"]]
+    stil = []
+    for i, z in enumerate(uebersicht, 1):
+        daten.append([z["kostenart"], _euro(z["plan"]), _euro(z["ist"]), _euro(z["abweichung"]),
+                      f"{z['anteil'] * 100:.0f} %" if z["anteil"] is not None else "–"])
+        if z["ueber"]:
+            stil.append(("BACKGROUND", (3, i), (3, i), colors.HexColor(_AMPEL["rot"])))
+    stil += [("ALIGN", (1, 0), (-1, -1), "RIGHT"), ("FONTNAME", (0, len(daten) - 1), (-1, len(daten) - 1),
+                                                    _schrift()[1])]
+    t = tabelle(daten, [62 * mm, 30 * mm, 30 * mm, 30 * mm, 22 * mm])
+    t.setStyle(TableStyle(stil))
+    inhalt.append(t)
+    inhalt.append(P("Posten", "h2"))
+    zeilen = [["Nr", "Kostenart", "Posten", "Plan", "Ist", "Quelle"]]
+    for p in posten:
+        zeilen.append([p["id"], P(_x(p["kostenart"])), P(_x(p["text"])), _euro(K.zahl(p.get("plan"))),
+                       _euro(K.zahl(p.get("ist"))), P(f"<font size=7.5>{_x(p.get('quelle', ''))}</font>")])
+    mit_kosten = [a for a in aufgaben if a.get("kosten_plan") is not None or a.get("kosten_ist") is not None]
+    for a in mit_kosten:
+        zeilen.append([a["nr"], P(K.AUFGABEN), P(_x(a["titel"])), _euro(a["kosten_plan"]), _euro(a["kosten_ist"]),
+                       P("<font size=7.5>Aufgabe</font>")])
+    t = tabelle(zeilen, [12 * mm, 32 * mm, 52 * mm, 24 * mm, 24 * mm, 30 * mm])
+    t.setStyle(TableStyle([("ALIGN", (3, 0), (4, -1), "RIGHT")]))
+    inhalt.append(t)
+    inhalt.append(Spacer(1, 4 * mm))
+    inhalt.append(P(_x(K.HINWEIS), "klein"))
+    return _dokument(ziel, f"Kostenübersicht {projekt}", inhalt)

@@ -99,7 +99,7 @@ def test_phasentor(tmp_path):
     assert "wieder geöffnet" in p.phase_verlauf("P4")[0].text
     with pytest.raises(ProjektFehler, match="neu berechnet"):
         p.phase_freigeben("P4")
-    with pytest.raises(ProjektFehler, match="späteren Meilenstein"):
+    with pytest.raises(ProjektFehler, match="noch kein Bauteil"):
         p.phase_freigeben("P5")
 
 
@@ -148,7 +148,7 @@ def test_altes_projekt_wird_umgestellt(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(pfad)
-    assert p.meta("schema_version") == "9"
+    assert p.meta("schema_version") == "10"
     assert p.anforderungen()[0].art == "Anforderung"
     assert p.berechnungen()[0].version == 1
     assert p.phase("P2").status == "in Arbeit" and p.phase("P4").status == "in Arbeit"
