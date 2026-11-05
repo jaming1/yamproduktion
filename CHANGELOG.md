@@ -164,3 +164,13 @@
 - **Yamaktaba als Archiv**: „In Yamaktaba archivieren“ (Ablage und Abnahme) legt Projekt-ZIP und Unterlagen ab, PDFs werden durchsuchbare Bücher in „99 Projekte & Medien“ und in der Sammlung „YamProduktion: <Projekt>“; doppelte PDFs werden erkannt
 - Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
 - 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel
+
+## Unveröffentlicht
+- **CAM-Export (K5)** – neue Seite „Fertigung › CAM-Export (G-Code)“: aus 3D-Teil und Arbeitsplan entstehen NC-Programme nach DIN 66025 / ISO 6983 (E42)
+  - Drehen in zwei Aufspannungen: Plandrehen, Zentrieren mit Reitstock-Halt bei schlanken Wellen, Bohren/Ausdrehen auf der Achse, Längsschruppen mit Schlichtaufmaß, Schlichten entlang der Kontur mit Fasen
+  - Fräsen: Passfedernuten, Bohrbilder je Aufspannrichtung (Anbohren, Tiefbohren mit Entspänen), Außenkontur bei plattenförmigen Teilen; Zahnräder: nur der Rohling
+  - Steuerungen DIN (Satznummern), Fanuc-ähnlich, LinuxCNC; Sicherheitsabstand, Schnitttiefe, Schlichtaufmaß, Kühlmittel und Programmnummer einstellbar
+  - Prüfung des erzeugten Codes: Verfahrwege, Hauptzeit im Vergleich zum Arbeitsplan, typische Fehler (Vorschub ohne F, Schnitt bei stehender Spindel, Eilgang im Werkstück, fehlendes Programmende); Werkzeugweg-Vorschau
+  - NC-Programme werden je Bauteil mit Version gespeichert (NC-001 …) und als `.nc`-Dateien exportiert; ändert sich das Bauteil, steht das Programm auf „neu prüfen“
+  - Projektdatei-Schema 14 (neue Tabelle `ncprogramm`, ältere Projekte werden beim Öffnen ergänzt)
+  - Hinweis: G-Code ist ungeprüft und muss vor dem Einsatz im Simulator der Steuerung getestet werden

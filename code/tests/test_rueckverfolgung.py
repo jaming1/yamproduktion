@@ -5,7 +5,7 @@ import sqlite3
 import pytest
 
 from yamproduktion.berechnungen import rotor
-from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler
+from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler, SCHEMA_VERSION
 
 
 def kwa_mit_berechnung(tmp_path):
@@ -148,7 +148,7 @@ def test_altes_projekt_wird_umgestellt(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(pfad)
-    assert p.meta("schema_version") == "10"
+    assert p.meta("schema_version") == str(SCHEMA_VERSION)
     assert p.anforderungen()[0].art == "Anforderung"
     assert p.berechnungen()[0].version == 1
     assert p.phase("P2").status == "in Arbeit" and p.phase("P4").status == "in Arbeit"

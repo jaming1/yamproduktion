@@ -19,6 +19,7 @@ from . import thema
 from .berechnungen_seite import BerechnungenSeite
 from .cad_seite import BauteilSeite
 from .arbeitsplan_seite import ArbeitsplanSeite
+from .cam_seite import CamSeite
 from .montage_seite import MontageSeite
 from .betrieb_seiten import InbetriebnahmeSeite, WartungSeite
 from .planung_seiten import AufgabenSeite, BudgetSeite
@@ -64,6 +65,7 @@ NAVIGATION = [
     ("   Zeichnungen", "zeichnungen"),
     ("FERTIGUNG", None),
     ("   Arbeitspläne", "arbeitsplaene"),
+    ("   CAM-Export (G-Code)", "cam"),
     ("   Kosten & Anfragen", "kosten"),
     ("MONTAGE", None),
     ("   Montagepläne", "montage"),
@@ -110,6 +112,7 @@ class Hauptfenster(QMainWindow):
         self.baugruppen = BaugruppenSeite()
         self.zeichnungen = ZeichnungSeite()
         self.arbeitsplaene = ArbeitsplanSeite()
+        self.cam = CamSeite()
         self.kosten = KostenSeite()
         self.montage = MontageSeite()
         self.inbetriebnahme = InbetriebnahmeSeite()
@@ -132,7 +135,7 @@ class Hauptfenster(QMainWindow):
                        "konzept": self.konzept, "werkstoffe": self.werkstoffe,
                        "bauteile": self.bauteile, "modellieren": self.modellieren,
                        "baugruppen": self.baugruppen, "zeichnungen": self.zeichnungen,
-                       "arbeitsplaene": self.arbeitsplaene, "kosten": self.kosten, "montage": self.montage,
+                       "arbeitsplaene": self.arbeitsplaene, "cam": self.cam, "kosten": self.kosten, "montage": self.montage,
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
                        "aufgaben": self.aufgaben, "budget": self.budget,
@@ -225,6 +228,7 @@ class Hauptfenster(QMainWindow):
         self.baugruppen.gespeichert.connect(self.uebersicht.aktualisieren)
         self.baugruppen.zeichnung_oeffnen.connect(self.zeichnung_oeffnen)
         self.arbeitsplaene.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.cam.gespeichert.connect(self.uebersicht.aktualisieren)
         self.montage.gespeichert.connect(self.uebersicht.aktualisieren)
         self.inbetriebnahme.gespeichert.connect(self.uebersicht.aktualisieren)
         self.wartung.gespeichert.connect(self.uebersicht.aktualisieren)
@@ -249,7 +253,7 @@ class Hauptfenster(QMainWindow):
     def _arbeitsseiten(self):
         return (self.uebersicht, self.ideen, self.anforderungen, self.funktionen, self.konzept,
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
-                self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
+                self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.cam, self.kosten, self.montage,
                 self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku,
                 self.aufgaben, self.budget, self.bibliothek, self.abnahme)
 
@@ -356,7 +360,7 @@ class Hauptfenster(QMainWindow):
             self.bauteile.laden()
         elif schluessel == "modellieren":
             self.modellieren.laden()
-        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
+        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "cam", "kosten", "montage", "inbetriebnahme", "wartung",
                             "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku", "aufgaben", "budget",
                             "bibliothek", "abnahme"):
             self.seiten[schluessel].laden()

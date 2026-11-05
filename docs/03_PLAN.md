@@ -75,6 +75,8 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 
 **Kann-Anforderungen** (K2 Kreativmethoden, K3 Blattelementmethode, K5 CAM-Export) kommen nach MS15 oder werden eingeschoben, wenn Zeit bleibt.
 
+- **K5 CAM-Export** ✅ (05.11.2026, unveröffentlicht): G-Code für Drehen (zwei Aufspannungen), Passfedernuten, Bohrbilder und Plattenkonturen mit Prüfung und Vorschau – siehe E42. Grenzen: keine Einstiche, Gewinde, Verzahnungen und Freiformkonturen.
+
 ---
 
 ## 3. Was du parallel schon tun kannst

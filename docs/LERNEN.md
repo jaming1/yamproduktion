@@ -114,3 +114,11 @@
 - **Erkenntnis:** Fremde Datenbanken nur mit `mode=ro` öffnen; schreiben nur über die Funktionen der App selbst, damit ihr Schema stimmt.
 - **Erkenntnis:** Für Tests eine kleine Muster-Yamaktaba aus Kopien ihrer Schnittstelle bauen – nie in Yamines echte Bibliothek schreiben.
 - **Für den Skill:** Andere eigene Apps zuerst als Quelle/Archiv anbinden, bevor Daten doppelt gehalten werden.
+
+## K5 CAM-Export (05.11.2026)
+- **Gut:** Dieselben Schnittwerte wie im Arbeitsplan – die Hauptzeit aus dem G-Code lässt sich direkt mit der Kalkulation vergleichen und fällt auf, wenn etwas nicht passt.
+- **Gut:** Ein eigener kleiner G-Code-Leser als Prüfer findet Fehler, die man im Text übersieht (Eilgang im Werkstück, Schnitt bei stehender Spindel) und liefert gleich die Vorschau.
+- **Erkenntnis Fachlich:** Ein Schruppschnitt auf genau dem Zieldurchmesser eines Absatzes muss bis zum *nächsten größeren* Absatz laufen – mit „≥“ statt „>“ bleibt der ganze Absatz stehen.
+- **Erkenntnis Fachlich:** Ob eine Bohrung durchgeht, verrät die Hüllbox nicht (Flansch mit Rohrstutzen). Ein Punkt 0,5 mm hinter dem Bohrungsgrund im Volumenmodell klärt es sicher.
+- **Erkenntnis:** Steuerungen unterscheiden sich schon im Vorschub je Umdrehung (G95 bzw. G99 bei Fanuc-Drehmaschinen) und bei O-Nummern (in LinuxCNC Unterprogramme) – ausgeschriebene G0/G1-Wege sind der kleinste gemeinsame Nenner.
+

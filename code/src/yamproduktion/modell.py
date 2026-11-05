@@ -28,7 +28,7 @@ VORLAGEN = {
     "kwa_anforderungen": ("Kleinwindanlage – nur Anforderungen", "Typische Anforderungen, ohne Zeitplan"),
     "leer": ("Leeres Projekt", "Ohne Vorgaben – für ein anderes Produkt"),
 }
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 14
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -62,6 +62,7 @@ OBJEKTE = {
     "normen":       ("NL", "name", "P2", "Normen-Checkliste"),
     "abweichung":   ("QA", "name", "P6", "Abweichungsliste"),
     "aufgabe":      ("AU", "titel", "", "Aufgabe"),          # Querschnitt: Phase steht in der Aufgabe
+    "ncprogramm":   ("NC", "name", "P6", "NC-Programm"),     # K5: G-Code je Bauteil
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -200,6 +201,10 @@ CREATE TABLE IF NOT EXISTS pruefplan (
     termin TEXT NOT NULL DEFAULT '', stand TEXT NOT NULL DEFAULT 'offen', phase TEXT NOT NULL DEFAULT '',
     objekt_typ TEXT NOT NULL DEFAULT '', objekt_id INTEGER, meilenstein INTEGER NOT NULL DEFAULT 0,
     kosten_plan REAL, kosten_ist REAL, notiz TEXT NOT NULL DEFAULT '',""" + _GEMEINSAM + """
+);
+CREATE TABLE IF NOT EXISTS ncprogramm (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, teil_id INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
 );
 CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
@@ -449,6 +454,9 @@ class Projekt:
             # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
             # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen;
             # 10: Aufgaben)
+            self._db.executescript(SCHEMA)
+        if von < 14:
+            # 14: NC-Programme (K5, CAM-Export)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -1720,6 +1728,51 @@ class Projekt:
         self._db.commit()
         return self.arbeitsplan(aid)
 
+    # ================================================================ CAM-Export (K5)
+    def cam_von_teil(self, teil_id: int) -> dict | None:
+        z = self._db.execute("SELECT id FROM ncprogramm WHERE teil_id=?", (teil_id,)).fetchone()
+        if not z:
+            return None
+        n = self.objekt("ncprogramm", z[0])
+        n["daten"] = json.loads(n["daten"])
+        return n
+
+    def cam_erzeugen(self, teil_id: int, einst: dict | None = None) -> list:
+        """NC-Programme aus Geometrie und Arbeitsplan (gespeichert, sonst Vorschlag aus der Geometrie)."""
+        from .fertigung import cam
+        t = self.teil(teil_id)
+        ap = self.arbeitsplan_von_teil(teil_id)
+        plan = ap["daten"] if ap else self.arbeitsplan_vorschlag(teil_id)
+        if plan.get("fertigung") == "fremd" and not any(
+                v.get("art") in ("plandrehen", "laengsdrehen", "fraesen", "bohren") for v in plan.get("vorgaenge", [])):
+            raise cam.CamFehler("Der Arbeitsplan enthält keine Dreh-, Fräs- oder Bohrarbeitsgänge.")
+        return cam.erzeugen(self.teil_form(teil_id)["form"], plan, einst, f"{t['nr']} {t['name']}")
+
+    def cam_speichern(self, teil_id: int, einst: dict | None = None) -> dict:
+        """NC-Programme eines Bauteils anlegen oder als neue Version speichern (verknüpft mit Teil und Arbeitsplan)."""
+        from .fertigung import cam
+        e = cam.Einstellungen.aus_dict(einst)
+        programme = self.cam_erzeugen(teil_id, e)
+        t = self.teil(teil_id)
+        name = f"{t['nr']} {t['name']}"
+        text = json.dumps({"einstellungen": e.als_dict(),
+                           "programme": [{"schluessel": p.schluessel, "titel": p.titel, "maschine": p.maschine,
+                                          "art": p.art, "text": p.text} for p in programme]}, ensure_ascii=False)
+        alt = self.cam_von_teil(teil_id)
+        if alt is None:
+            nid = self.objekt_neu("ncprogramm", teil_id=teil_id, name=name, daten=text)["id"]
+            self.verknuepfen("teil", teil_id, "ncprogramm", nid, "Bauteil")
+        else:
+            nid = alt["id"]
+            self._db.execute("UPDATE ncprogramm SET name=?, daten=?, version=version+1, status='Entwurf', "
+                             "geaendert=? WHERE id=?", (name, text, _jetzt(), nid))
+            self._protokollieren("ncprogramm", nid, f"Version {alt['version'] + 1}: gespeichert")
+        ap = self.arbeitsplan_von_teil(teil_id)
+        if ap:
+            self.verknuepfen("arbeitsplan", ap["id"], "ncprogramm", nid, "Arbeitsplan")
+        self._db.commit()
+        return self.cam_von_teil(teil_id)
+
     def anfrage_eintraege(self) -> list[dict]:
         """Alle Teile mit Fremdfertigung für die Anfrageliste (Lastenheft M37)."""
         from .fertigung import arbeitsplan as A
@@ -1767,6 +1820,7 @@ class Projekt:
         "risiko": {"art", "name", "daten"},
         "normen": {"art", "name", "daten"},
         "abweichung": {"art", "name", "daten"},
+        "ncprogramm": {"teil_id", "name", "daten"},
         "aufgabe": {"titel", "verantwortlich", "start", "termin", "stand", "phase", "objekt_typ", "objekt_id",
                     "meilenstein", "kosten_plan", "kosten_ist", "notiz"},
     }
@@ -1856,6 +1910,9 @@ class Projekt:
             pp = self.pruefplan_von_teil(id_)
             if pp:
                 self.objekt_loeschen("pruefplan", pp["id"])
+            nc = self.cam_von_teil(id_)
+            if nc:
+                self.objekt_loeschen("ncprogramm", nc["id"])
         elif typ == "baugruppe":
             mp = self.montageplan_von_baugruppe(id_)
             if mp:
