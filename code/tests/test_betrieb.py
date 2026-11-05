@@ -85,5 +85,5 @@ def test_inbetriebnahme_wartung_im_projekt(tmp_path):
     assert wartungsplan_erstellen(p.wartungsplan(wp["id"]), tmp_path / "w.pdf", "KWA").stat().st_size > 2000
     p.schliessen()
     p2 = Projekt.oeffnen(pfad)
-    assert p2.meta("schema_version") == "8" and len(p2.inbetriebnahmen()) == 1
+    assert p2.meta("schema_version") == "9" and len(p2.inbetriebnahmen()) == 1
     p2.schliessen()

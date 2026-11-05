@@ -19,6 +19,7 @@ from .cad_seite import BauteilSeite
 from .arbeitsplan_seite import ArbeitsplanSeite
 from .montage_seite import MontageSeite
 from .betrieb_seiten import InbetriebnahmeSeite, WartungSeite
+from .qualitaet_seiten import DokuSeite, PruefplanSeite, TabellenSeite
 from .baugruppen_seite import BaugruppenSeite
 from .modellier_seite import ModellierSeite
 from .kosten_seite import KostenSeite
@@ -64,6 +65,13 @@ NAVIGATION = [
     ("BETRIEB", None),
     ("   Inbetriebnahme", "inbetriebnahme"),
     ("   Wartung", "wartung"),
+    ("QUALITÄT & SICHERHEIT", None),
+    ("   Prüfpläne", "pruefplaene"),
+    ("   FMEA", "fmea"),
+    ("   Abweichungen", "abweichung"),
+    ("   Risikobeurteilung", "risiko"),
+    ("   Normen", "normen"),
+    ("   Technische Doku", "doku"),
     ("Werkstoffe", "werkstoffe"),
 ]
 RECHENSEITEN = {"rotor": "rotorauslegung", "ertrag": "ertrag", "lasten": "lasten_iec", "antrieb": "antrieb",
@@ -95,6 +103,9 @@ class Hauptfenster(QMainWindow):
         self.montage = MontageSeite()
         self.inbetriebnahme = InbetriebnahmeSeite()
         self.wartung = WartungSeite()
+        self.pruefplaene = PruefplanSeite()
+        self.qseiten = {t: TabellenSeite(t) for t in ("fmea", "abweichung", "risiko", "normen")}
+        self.doku = DokuSeite()
         self.berechnungen = BerechnungenSeite()
         self.ideen = IdeenSeite()
         self.funktionen = FunktionenSeite()
@@ -108,6 +119,7 @@ class Hauptfenster(QMainWindow):
                        "baugruppen": self.baugruppen, "zeichnungen": self.zeichnungen,
                        "arbeitsplaene": self.arbeitsplaene, "kosten": self.kosten, "montage": self.montage,
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
+                       "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
                        **self.rechenseiten}
         for s in self.seiten.values():
             self.stapel.addWidget(s)
@@ -200,6 +212,9 @@ class Hauptfenster(QMainWindow):
         self.montage.gespeichert.connect(self.uebersicht.aktualisieren)
         self.inbetriebnahme.gespeichert.connect(self.uebersicht.aktualisieren)
         self.wartung.gespeichert.connect(self.uebersicht.aktualisieren)
+        self.pruefplaene.gespeichert.connect(self.uebersicht.aktualisieren)
+        for q in self.qseiten.values():
+            q.gespeichert.connect(self.uebersicht.aktualisieren)
         self.kosten.arbeitsplan_oeffnen.connect(self.arbeitsplan_oeffnen)
         self.anforderungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
         self.berechnungen.gehe_zu_objekt.connect(self.gehe_zu_objekt)
@@ -213,7 +228,7 @@ class Hauptfenster(QMainWindow):
         return (self.uebersicht, self.ideen, self.anforderungen, self.funktionen, self.konzept,
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
                 self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
-                self.inbetriebnahme, self.wartung)
+                self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku)
 
     def _rechenseite_oeffnen(self, typ: str):
         for schluessel, t in RECHENSEITEN.items():
@@ -307,7 +322,8 @@ class Hauptfenster(QMainWindow):
             self.bauteile.laden()
         elif schluessel == "modellieren":
             self.modellieren.laden()
-        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung"):
+        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
+                            "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku"):
             self.seiten[schluessel].laden()
         elif schluessel in RECHENSEITEN and self.projekt:
             self.seiten[schluessel]._verknuepfung_zeigen()
@@ -340,6 +356,12 @@ class Hauptfenster(QMainWindow):
             seite = self.inbetriebnahme if typ == "inbetriebnahme" else self.wartung
             self.gehe_zu("inbetriebnahme" if typ == "inbetriebnahme" else "wartung")
             seite.laden_id(id_)
+        elif typ == "pruefplan":
+            self.gehe_zu("pruefplaene")
+            self.pruefplaene.teil_laden(self.projekt.pruefplan(id_)["teil_id"])
+        elif typ in self.qseiten:
+            self.gehe_zu(typ)
+            self.qseiten[typ].laden_id(id_)
         elif typ == "montageplan":
             self.gehe_zu("montage")
             self.montage.baugruppe_laden(self.projekt.montageplan(id_)["baugruppe_id"])

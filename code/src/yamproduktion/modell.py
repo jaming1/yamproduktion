@@ -21,7 +21,7 @@ from .berechnungen.basis import formatiere
 from .einheiten import EinheitFehler, pruefe_einheit, umrechnen
 
 DATEIENDUNG = ".yamp"
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 PRIORITAETEN = ("Muss", "Soll", "Kann")
 ARTEN_ANFORDERUNG = ("Anforderung", "Eigenschaft")
 STATUS = ("Entwurf", "geprüft", "freigegeben")
@@ -49,6 +49,11 @@ OBJEKTE = {
     "montageplan":  ("M", "name", "P7", "Montageplan"),
     "inbetriebnahme": ("IB", "name", "P8", "Inbetriebnahme"),
     "wartungsplan": ("WP", "name", "P9", "Wartungsplan"),
+    "pruefplan":    ("PP", "name", "P6", "Prüfplan"),
+    "fmea":         ("FM", "name", "P5", "FMEA"),
+    "risiko":       ("RB", "name", "P5", "Risikobeurteilung"),
+    "normen":       ("NL", "name", "P2", "Normen-Checkliste"),
+    "abweichung":   ("QA", "name", "P6", "Abweichungsliste"),
 }
 PHASE_VON_TYP = {typ: info[2] for typ, info in OBJEKTE.items()}
 TYP_NAME = {typ: info[3] for typ, info in OBJEKTE.items()}
@@ -173,7 +178,15 @@ CREATE TABLE IF NOT EXISTS wartungsplan (
     id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE,
     name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
 );
-CREATE TABLE IF NOT EXISTS bewertung (
+CREATE TABLE IF NOT EXISTS pruefplan (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, teil_id INTEGER NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{}',""" + _GEMEINSAM + """
+);
+""" + "".join(f"""CREATE TABLE IF NOT EXISTS {_t} (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, nr TEXT NOT NULL UNIQUE, art TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '', daten TEXT NOT NULL DEFAULT '{{}}',""" + _GEMEINSAM + """
+);
+""" for _t in ("fmea", "risiko", "normen", "abweichung")) + """CREATE TABLE IF NOT EXISTS bewertung (
     variante_id INTEGER NOT NULL, kriterium_id INTEGER NOT NULL, punkte REAL NOT NULL,
     PRIMARY KEY (variante_id, kriterium_id)
 );
@@ -329,9 +342,9 @@ class Projekt:
             for typ in ("anforderung", "berechnung"):
                 if self._db.execute(f"SELECT 1 FROM {typ} LIMIT 1").fetchone():
                     self._phase_in_arbeit(PHASE_VON_TYP[typ])
-        if von < 8:
+        if von < 9:
             # neue Tabellen (3: Ideen, TRIZ, Funktionen, Konzept; 4: Bauteile; 5: Baugruppen; 6: Arbeitspläne;
-            # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne)
+            # 7: Montagepläne; 8: Inbetriebnahme, Wartungspläne; 9: Prüfpläne, FMEA, Risiko, Normen, Abweichungen)
             self._db.executescript(SCHEMA)
         self._setze_meta("schema_version", str(SCHEMA_VERSION))
         self._db.commit()
@@ -991,6 +1004,55 @@ class Projekt:
     def baugruppe_loeschen(self, id_: int) -> None:
         self.objekt_loeschen("baugruppe", id_)
 
+    # ================================================================ Zeichnungen (MS8, für MS12 wiederverwendbar)
+    def passmasse(self, typ: str, id_: int) -> str:
+        """Passmaße einer Zeichnung, z. B. „Ø80 k6; Ø140 H7“ (werden je Teil/Baugruppe gemerkt)."""
+        return self.meta(f"passmasse:{typ}:{id_}", "") or ""
+
+    def passmasse_speichern(self, typ: str, id_: int, text: str) -> None:
+        if text != self.passmasse(typ, id_):
+            self._setze_meta(f"passmasse:{typ}:{id_}", text)
+            self._db.commit()
+
+    @staticmethod
+    def passmasse_lesen(text: str) -> dict:
+        """„Ø80 k6; Ø13,5 H7“ → {"80": "k6", "13,5": "H7"} (Schlüssel wie auf der Zeichnung formatiert)."""
+        import re
+        out = {}
+        for teil in re.split(r";|,\s+", text or ""):
+            worte = teil.split()
+            if len(worte) >= 2:
+                try:
+                    schluessel = formatiere(float(worte[0].lstrip("Ø⌀").replace(",", ".")))
+                except ValueError:
+                    continue
+                out[schluessel] = " ".join(worte[1:])
+        return out
+
+    def zeichnung(self, typ: str, id_: int, ersteller: str = "", schnitt=None, massstab=None):
+        """Technische Zeichnung eines Teils oder einer Baugruppe mit den gemerkten Passmaßen."""
+        from .cad import zeichnung as Z
+        felder = {"projekt": self.name, "ersteller": ersteller}
+        stueckliste = positionen = None
+        if typ == "teil":
+            t = self.teil(id_)
+            form = self.teil_form(id_)["form"]
+            felder.update(benennung=t["name"], sachnummer=t["nr"], werkstoff=t["werkstoff"],
+                          masse=f"{formatiere(t['masse'])} kg" if t["masse"] else "",
+                          version=f"V{t['version']} · {t['status']}")
+        else:
+            g = self.baugruppe(id_)
+            r = self.baugruppe_bauen(g["definition"])
+            if not r.ok:
+                raise ProjektFehler(r.fehler)
+            form = r.gesamtform()
+            stueckliste, positionen = r.stueckliste, r.positionspunkte()
+            felder.update(benennung=g["name"], sachnummer=g["nr"], werkstoff="siehe Stückliste",
+                          masse=f"{formatiere(r.masse)} kg", version=f"V{g['version']} · {g['status']}")
+        return Z.zeichnung_erstellen(form, felder, schnitt=schnitt,
+                                     toleranzen=self.passmasse_lesen(self.passmasse(typ, id_)),
+                                     massstab=massstab, stueckliste=stueckliste, positionen=positionen)
+
     # ================================================================ Montage (MS10)
     def montageplan_von_baugruppe(self, baugruppe_id: int) -> dict | None:
         z = self._db.execute("SELECT id FROM montageplan WHERE baugruppe_id=?", (baugruppe_id,)).fetchone()
@@ -1188,6 +1250,151 @@ class Projekt:
                                beschreibung=f"Rückmeldung aus dem Betrieb{': ' + herkunft if herkunft else ''}. "
                                             "Für die nächste Version prüfen.")
 
+    # ================================================================ Qualität, Sicherheit & Normen (MS12)
+    def _nachweise(self) -> dict[str, list[str]]:
+        """Berechnungsart bzw. Objektart → Nummern, die als Nachweis gelten (neueste Berechnung je Art)."""
+        out: dict[str, list[str]] = {}
+        for b in self.berechnungen():                       # neueste zuerst
+            out.setdefault(b.typ, [b.nr])
+        for typ in ("risiko", "pruefplan", "inbetriebnahme"):
+            nrn = [o["nr"] for o in self.liste(typ)]
+            if nrn:
+                out[typ] = nrn
+        return out
+
+    # ---------- Prüfpläne (M43, S15)
+    def pruefplan_von_teil(self, teil_id: int) -> dict | None:
+        z = self._db.execute("SELECT id FROM pruefplan WHERE teil_id=?", (teil_id,)).fetchone()
+        return self.pruefplan(z[0]) if z else None
+
+    def pruefplan(self, id_: int) -> dict:
+        return self._betrieb_laden("pruefplan", id_)
+
+    def pruefplaene(self) -> list[dict]:
+        return [self.pruefplan(o["id"]) for o in self.liste("pruefplan")]
+
+    def _pruefmerkmale(self, teil_id: int) -> list[dict]:
+        from .qualitaet import pruefplan as PP
+        return PP.aus_zeichnung(self.zeichnung("teil", teil_id).masse)
+
+    def pruefplan_neu(self, teil_id: int) -> dict:
+        """Prüfplan aus den Maßen und Passmaßen der Zeichnung des Bauteils (je Bauteil einer)."""
+        if self.pruefplan_von_teil(teil_id):
+            raise ProjektFehler("Für dieses Bauteil gibt es schon einen Prüfplan.")
+        t = self.teil(teil_id)
+        daten = {"teil": t["nr"], "zeichnung": f"V{t['version']}", "datum": datetime.now().date().isoformat(),
+                 "pruefer": "", "los": "", "merkmale": self._pruefmerkmale(teil_id)}
+        pid = self.objekt_neu("pruefplan", teil_id=teil_id, name=f"Prüfplan {t['name']}",
+                              daten=json.dumps(daten, ensure_ascii=False))["id"]
+        self.verknuepfen("teil", teil_id, "pruefplan", pid, "Zeichnung")
+        self._db.commit()
+        return self.pruefplan(pid)
+
+    def pruefplan_aktualisieren(self, id_: int) -> tuple[dict, int, int]:
+        """Merkmale neu aus der Zeichnung lesen; Ist-Werte bleiben erhalten. → (Plan, neu, entfallen)."""
+        alt = self.pruefplan(id_)
+        bisher = {m["merkmal"]: m for m in alt["daten"].get("merkmale", [])}
+        neu = self._pruefmerkmale(alt["teil_id"])
+        for m in neu:
+            b = bisher.get(m["merkmal"])
+            if b:
+                for k in ("ist", "bemerkung", "pruefmittel", "umfang"):
+                    m[k] = b.get(k, m[k])
+                if m.get("min") is None:
+                    m["min"], m["max"] = b.get("min"), b.get("max")
+        zahl_neu = sum(1 for m in neu if m["merkmal"] not in bisher)
+        entfallen = len(set(bisher) - {m["merkmal"] for m in neu})
+        daten = dict(alt["daten"], merkmale=neu, zeichnung=f"V{self.teil(alt['teil_id'])['version']}")
+        return self.pruefplan_speichern(id_, daten), zahl_neu, entfallen
+
+    def pruefplan_speichern(self, id_: int, daten: dict) -> dict:
+        from .qualitaet import pruefplan as PP
+        PP.auswerten(daten)
+        self._betrieb_speichern("pruefplan", id_, daten)
+        self._db.commit()
+        return self.pruefplan(id_)
+
+    # ---------- FMEA, Risikobeurteilung, Normen, Abweichungen (M44–M47)
+    def qdok_neu(self, typ: str, art: str = "", name: str = "") -> dict:
+        """Neues Tabellen-Dokument mit Vorlage „Kleinwindanlage“ und Nachweisen aus dem Projekt."""
+        from .qualitaet import tabellen as Q
+        nachweise = self._nachweise()
+        neueste = {k: v[0] for k, v in nachweise.items()}
+        if typ == "fmea":
+            art = art or Q.FMEA.arten[0]
+            daten = Q.fmea_vorlage(art, neueste, [t["name"] for t in self.teile()])
+        elif typ == "risiko":
+            daten = Q.risiko_vorlage(neueste)
+            daten["grenzen"] = {"verwendung": "Netzgekoppelte Kleinwindanlage zur Stromerzeugung, Aufstellung im "
+                                              "Freien, Bedienung durch eingewiesene Personen",
+                                "fehlanwendung": "Besteigen des Turms im Betrieb, Betrieb ohne Bremse",
+                                "lebensdauer": "20 Jahre (Auslegung)"}
+        elif typ == "normen":
+            daten = Q.normen_vorlage(nachweise)
+        elif typ == "abweichung":
+            daten = {"zeilen": []}
+        else:
+            raise ProjektFehler(f"Unbekannte Dokumentart {typ}.")
+        name = name or (art if typ == "fmea" else Q.ART[typ].titel)
+        qid = self.objekt_neu(typ, art=art, name=name, daten=json.dumps(daten, ensure_ascii=False))["id"]
+        self._qdok_verknuepfen(typ, qid, daten)
+        self._db.commit()
+        return self.qdok(typ, qid)
+
+    def _qdok_verknuepfen(self, typ: str, id_: int, daten: dict) -> None:
+        """Berechnungen, die im Dokument als Nachweis genannt sind, verknüpfen (Änderung → „neu prüfen“)."""
+        import re
+        nrn = set()
+        for z in daten.get("zeilen", []):
+            for k in ("vermeidung", "nachweis"):
+                nrn |= set(re.findall(r"\bB-\d{3}\b", str(z.get(k, ""))))
+        refs = [("berechnung", b.id) for b in self.berechnungen() if b.nr in nrn]
+        self._betrieb_verknuepfen(typ, id_, refs)
+
+    def qdok(self, typ: str, id_: int) -> dict:
+        return self._betrieb_laden(typ, id_)
+
+    def qdoks(self, typ: str) -> list[dict]:
+        return [self.qdok(typ, o["id"]) for o in self.liste(typ)]
+
+    def qdok_speichern(self, typ: str, id_: int, daten: dict, name: str | None = None) -> dict:
+        self._betrieb_speichern(typ, id_, daten, name)
+        self._qdok_verknuepfen(typ, id_, daten)
+        self._db.commit()
+        return self.qdok(typ, id_)
+
+    def normen_abgleichen(self, id_: int) -> tuple[dict, int]:
+        from .qualitaet import tabellen as Q
+        d = self.qdok("normen", id_)
+        n = Q.normen_abgleichen(d["daten"], self._nachweise())
+        return (self.qdok_speichern("normen", id_, d["daten"]) if n else d), n
+
+    def abweichungen_funde(self) -> list[dict]:
+        """n. i. O. aus Prüfplänen und Inbetriebnahmen als Vorschläge für die Abweichungsliste."""
+        from .betrieb import inbetriebnahme as IB
+        from .qualitaet import pruefplan as PP
+        funde = []
+        for pp in self.pruefplaene():
+            for m in pp["daten"].get("merkmale", []):
+                if PP.ergebnis(m) == IB.NIO:
+                    funde.append({"schluessel": f"{pp['nr']}/{m['id']}", "datum": pp["daten"].get("datum", ""),
+                                  "bauteil": pp["daten"].get("teil", ""),
+                                  "beschreibung": f"{m['merkmal']}: Ist {m.get('ist', '')} außerhalb "
+                                                  f"{PP.grenz_text(m)}", "herkunft": pp["nr"]})
+        for ib in self.inbetriebnahmen():
+            for p in IB.maengel(ib["daten"]):
+                funde.append({"schluessel": f"{ib['nr']}/{p['id']}", "datum": ib["daten"].get("datum", ""),
+                              "bauteil": p.get("gruppe", ""),
+                              "beschreibung": f"{p['text']}: Ist {p.get('ist', '') or 'n. i. O.'}",
+                              "herkunft": ib["nr"]})
+        return funde
+
+    def abweichungen_uebernehmen(self, id_: int) -> tuple[dict, int]:
+        from .qualitaet import tabellen as Q
+        d = self.qdok("abweichung", id_)
+        n = Q.abweichungen_uebernehmen(d["daten"], self.abweichungen_funde())
+        return (self.qdok_speichern("abweichung", id_, d["daten"]) if n else d), n
+
     # ================================================================ Fertigung & Kosten (MS9)
     def kostensaetze(self) -> dict:
         """Stundensätze, Materialpreise (€/kg) und Zukaufpreise (€/Stück) des Projekts – Vorgabe: Schätzwerte."""
@@ -1299,6 +1506,11 @@ class Projekt:
         "montageplan": {"baugruppe_id", "name", "daten"},
         "inbetriebnahme": {"name", "daten"},
         "wartungsplan": {"name", "daten"},
+        "pruefplan": {"teil_id", "name", "daten"},
+        "fmea": {"art", "name", "daten"},
+        "risiko": {"art", "name", "daten"},
+        "normen": {"art", "name", "daten"},
+        "abweichung": {"art", "name", "daten"},
     }
     _FELD_NAMEN = {"titel": "Titel", "problem": "Problem", "nutzen": "Nutzen", "beschreibung": "Beschreibung",
                    "ier": "Ideales Endergebnis", "ressourcen": "Ressourcen", "bild": "Bild",
@@ -1381,6 +1593,9 @@ class Projekt:
             ap = self.arbeitsplan_von_teil(id_)
             if ap:
                 self.objekt_loeschen("arbeitsplan", ap["id"])
+            pp = self.pruefplan_von_teil(id_)
+            if pp:
+                self.objekt_loeschen("pruefplan", pp["id"])
         elif typ == "baugruppe":
             mp = self.montageplan_von_baugruppe(id_)
             if mp:

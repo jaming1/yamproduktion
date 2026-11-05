@@ -148,7 +148,7 @@ def test_altes_projekt_wird_umgestellt(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(pfad)
-    assert p.meta("schema_version") == "8"
+    assert p.meta("schema_version") == "9"
     assert p.anforderungen()[0].art == "Anforderung"
     assert p.berechnungen()[0].version == 1
     assert p.phase("P2").status == "in Arbeit" and p.phase("P4").status == "in Arbeit"

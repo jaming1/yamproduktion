@@ -123,3 +123,14 @@
 - IB-001 … und WP-001 … verknüpft mit ihren Quellen (Änderung → „neu prüfen“); Dateiformat Version 8
 - 133 automatische Tests (4 neu) und Screenshots hell/dunkel
 
+## 04.11.2026 – MS12 Qualität, Sicherheit & Normen ✅ (Version 0.12.0)
+- **Passmaße** auf der Zeichnung werden je Bauteil gemerkt; die Zeichnung liefert ihre Maßtexte für den Prüfplan
+- Neue Seite **Prüfpläne**: Prüfmerkmale aus der Zeichnung, Grenzmaße nach ISO 286 (H, F, G, f, g, h, js, k, m, n, p; IT5–IT11) und ISO 2768-m, Prüfmittel nach der 1/10-Regel, Ist-Werte mit i. O./n. i. O., **Prüfprotokoll** als PDF mit Prüfmittelliste; Aktualisieren aus der Zeichnung behält Ist-Werte
+- Neue Seite **FMEA**: Konstruktions- und Prozess-FMEA mit Vorlage Kleinwindanlage, B·A·E, RPZ, Ampel, Maßnahme und Neubewertung
+- Neue Seite **Abweichungen**: Ursache, Maßnahme, Verantwortlich, Termin, Wirksamkeit; n. i. O. aus Prüfplänen und Inbetriebnahme übernehmen
+- Neue Seite **Risikobeurteilung** nach EN ISO 12100 / (EU) 2023/1230: Grenzen der Maschine, 13 Gefährdungen, S·W, Schutzmaßnahme mit Stufe, Restrisiko erst nach Umsetzung
+- Neue Seite **Normen**: 20 Normen und Regeln mit Status und Nachweis aus dem Projekt, Abgleich mit neuen Berechnungen
+- Neue Seite **Technische Doku**: alle Unterlagen als **ein PDF** mit Deckblatt, Inhaltsverzeichnis (fehlende Kapitel rot) und Lesezeichen (pypdf)
+- PP-, FM-, RB-, NL-, QA-Nummern, verknüpft mit Teilen und Berechnungen (Änderung → „neu prüfen“); Dateiformat Version 9
+- 137 automatische Tests (4 neu) und Screenshots hell/dunkel
+

@@ -660,3 +660,119 @@ def wartungsplan_erstellen(wp: dict, ziel: str | Path, projekt: str = "", heute=
     inhalt.append(P("● = Verschleißteil. Verschleißteile: " + ", ".join(_x(p["bauteil"]) for p in vt), "klein"))
     inhalt += [Spacer(1, 6), P(_x(W.HINWEIS), "klein")]
     return _dokument(ziel, f"Wartungsplan {wp['nr']}", inhalt)
+
+
+# ================================================================ Qualität, Sicherheit & Normen (MS12)
+def pruefprotokoll_erstellen(pp: dict, ziel: str | Path, projekt: str = "", teilname: str = "") -> Path:
+    """Prüfplan und Prüfprotokoll eines Bauteils (M43, S15): Merkmale, Grenzmaße, Prüfmittel, Ist, Ergebnis."""
+    from .betrieb import inbetriebnahme as IB
+    from .qualitaet import pruefplan as PP
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    d = pp["daten"]
+    a = PP.auswerten(d)
+    inhalt = _kopf_betrieb(s, "Prüfplan und Prüfprotokoll", pp["nr"], projekt,
+                           f"Bauteil: {_x(d.get('teil', ''))} {_x(teilname)} &nbsp;·&nbsp; Zeichnung "
+                           f"{_x(d.get('zeichnung', ''))} &nbsp;·&nbsp; Datum: {_x(_datum(d.get('datum', '')))}"
+                           f" &nbsp;·&nbsp; Prüfer: {_x(d.get('pruefer', '') or '–')}"
+                           f" &nbsp;·&nbsp; Los: {_x(d.get('los', '') or '–')}")
+    z = a["zahlen"]
+    urteil = {IB.IO: "<b>Bauteil i. O.</b> – alle Merkmale innerhalb der Grenzmaße.",
+              IB.NIO: f"<b>Bauteil n. i. O.</b> – {z[IB.NIO]} Merkmal(e) außerhalb.",
+              IB.OFFEN: f"<b>Prüfung offen</b> – {z[IB.OFFEN]} Merkmal(e) noch ohne Ist-Wert."}[a["gesamt"]]
+    inhalt.append(P(f"{urteil} &nbsp; ({z[IB.IO]} von {len(d.get('merkmale', []))} i. O.)"))
+    farbe = {IB.IO: colors.HexColor("#E3F2E1"), IB.NIO: colors.HexColor("#FBE3E1")}
+    zelle = ParagraphStyle("z", parent=s["text"], fontSize=8.5, leading=10.5)
+    Z_ = lambda txt: Paragraph(txt, zelle)  # noqa: E731
+    daten = [[Z_(f"<b>{h}</b>") for h in ("Nr", "Merkmal", "Toleranz", "Grenzmaße mm", "Prüfmittel", "Umfang", "Ist",
+                                           "Ergebnis")]]
+    stil = []
+    for i, m in enumerate(d.get("merkmale", []), 1):
+        erg = PP.ergebnis(m)
+        text = _x(m["merkmal"]) + (f"<br/><font size=7>{_x(m['bemerkung'])}</font>" if m.get("bemerkung") else "")
+        daten.append([Z_(m["id"]), Z_(text), Z_(_x(m["toleranz"])), Z_(_x(PP.grenz_text(m))),
+                      Z_(_x(m["pruefmittel"])), Z_(_x(m["umfang"])), Z_(_x(m.get("ist", ""))), Z_(erg)])
+        if erg in farbe:
+            stil.append(("BACKGROUND", (7, i), (7, i), farbe[erg]))
+    t = tabelle(daten, [12 * mm, 24 * mm, 18 * mm, 27 * mm, 34 * mm, 22 * mm, 18 * mm, 19 * mm])
+    t.setStyle(TableStyle(stil))
+    inhalt.append(t)
+    inhalt.append(P("Prüfmittel", "h2"))
+    inhalt.append(tabelle([["Prüfmittel", "Merkmale", "Kalibriert bis"]] +
+                          [[P(_x(n)), str(k), ""] for n, k in PP.pruefmittelliste(d)], [90 * mm, 22 * mm, 40 * mm]))
+    inhalt.append(Spacer(1, 4 * mm))
+    inhalt.append(P(_x(PP.HINWEIS), "klein"))
+    inhalt.append(Spacer(1, 10 * mm))
+    inhalt.append(tabelle([["Geprüft (Datum, Unterschrift)", "Freigabe (Datum, Unterschrift)"], ["\n\n", ""]],
+                          [87 * mm, 87 * mm]))
+    return _dokument(ziel, f"Prüfprotokoll {pp['nr']}", inhalt)
+
+
+_AMPEL = {"gruen": "#E3F2E1", "gelb": "#FFF4D6", "rot": "#FBE3E1", "grau": "#EEEEEE"}
+
+
+def qdok_erstellen(typ: str, dok: dict, ziel: str | Path, projekt: str = "") -> Path:
+    """FMEA, Risikobeurteilung, Normen-Checkliste oder Abweichungsliste als Tabelle (A4 quer)."""
+    from .qualitaet import tabellen as Q
+    art = Q.ART[typ]
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    zelle = ParagraphStyle("z", parent=s["text"], fontSize=7.5, leading=9.5)
+    d = dok["daten"]
+    titel_ = dok.get("art") if typ == "fmea" and dok.get("art") else art.titel
+    inhalt = _kopf_betrieb(s, titel_, dok["nr"], projekt, f"{_x(dok['name'])} &nbsp;·&nbsp; Version {dok['version']}"
+                                                          f" · {_x(dok['status'])}")
+    g = d.get("grenzen")
+    if g:
+        inhalt.append(P("Grenzen der Maschine (EN ISO 12100, 5.3)", "h3"))
+        inhalt.append(P(f"<b>Bestimmungsgemäße Verwendung:</b> {_x(g.get('verwendung', ''))}<br/>"
+                        f"<b>Vorhersehbare Fehlanwendung:</b> {_x(g.get('fehlanwendung', ''))}<br/>"
+                        f"<b>Lebensdauer:</b> {_x(g.get('lebensdauer', ''))}", "klein"))
+    zahlen = Q.zaehlen(art, d)
+    inhalt.append(P(f"{len(d.get('zeilen', []))} Einträge &nbsp;·&nbsp; rot {zahlen['rot']} &nbsp;·&nbsp; "
+                    f"gelb {zahlen['gelb']} &nbsp;·&nbsp; grün {zahlen['gruen']}", "klein"))
+    spalten = [sp for sp in art.spalten if sp.pdf]
+    verfuegbar = 261 - 26
+    faktor = verfuegbar / sum(sp.pdf for sp in spalten)
+    kopf = [Paragraph(f"<b>{_x(sp.titel)}</b>", zelle) for sp in spalten] + [Paragraph("<b>Bewertung</b>", zelle)]
+    daten, stil = [kopf], []
+    for i, z in enumerate(d.get("zeilen", []), 1):
+        text, ampel = art.bewerten(z)
+        daten.append([Paragraph(_x(sp.fn(z) if sp.fn else z.get(sp.key, "")), zelle) for sp in spalten]
+                     + [Paragraph(_x(text), zelle)])
+        stil.append(("BACKGROUND", (len(spalten), i), (len(spalten), i), colors.HexColor(_AMPEL[ampel])))
+    t = tabelle(daten, [sp.pdf * faktor * mm for sp in spalten] + [26 * mm])
+    t.setStyle(TableStyle(stil + [("TOPPADDING", (0, 0), (-1, -1), 2), ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                                  ("LEFTPADDING", (0, 0), (-1, -1), 2), ("RIGHTPADDING", (0, 0), (-1, -1), 2)]))
+    inhalt.append(t)
+    inhalt.append(Spacer(1, 3 * mm))
+    inhalt.append(P(_x(art.hinweis), "klein"))
+    return _dokument(ziel, f"{titel_} {dok['nr']}", inhalt, quer=True)
+
+
+def deckblatt_erstellen(ziel: str | Path, projekt: str, kapitel: list[tuple[str, int | None, str]],
+                        ersteller: str = "") -> Path:
+    """Deckblatt mit Inhaltsverzeichnis der technischen Dokumentation. kapitel: (Titel, Seite oder None, Hinweis)."""
+    ziel = Path(ziel)
+    s, tabelle = _werkzeug()
+    P = lambda txt, st="text": Paragraph(txt, s[st])  # noqa: E731
+    inhalt = [Spacer(1, 30 * mm), P("Technische Dokumentation", "h1"), P(_x(projekt), "h2"),
+              P(f"Stand: {datetime.now():%d.%m.%Y}" + (f" &nbsp;·&nbsp; Ersteller: {_x(ersteller)}" if ersteller
+                                                         else ""), "klein"),
+              Spacer(1, 12 * mm), P("Inhalt", "h2")]
+    zeilen = [["Kapitel", "Seite", "Hinweis"]]
+    stil = []
+    for i, (titel_, seite, hinweis) in enumerate(kapitel, 1):
+        zeilen.append([P(_x(titel_)), "–" if seite is None else str(seite), P(f"<font size=8>{_x(hinweis)}</font>")])
+        if seite is None:
+            stil.append(("TEXTCOLOR", (0, i), (-1, i), colors.HexColor("#A33A2B")))
+    t = tabelle(zeilen, [80 * mm, 16 * mm, 78 * mm])
+    t.setStyle(TableStyle(stil))
+    inhalt.append(t)
+    inhalt.append(Spacer(1, 8 * mm))
+    inhalt.append(P("Diese Zusammenstellung ersetzt keine Prüfung durch eine Fachperson. Werte mit „Richtwert“, "
+                    "„Schätzwert“ oder „Norm, ungeprüft“ sind vor der Fertigung und der Konformitätserklärung zu "
+                    "bestätigen. Rot markierte Kapitel fehlen noch.", "klein"))
+    return _dokument(ziel, f"Technische Dokumentation {projekt}", inhalt)

@@ -56,6 +56,33 @@ def szene_bilder(szene: SZ.Szene, plan: dict, explosion, groesse=(1000, 560)) ->
     return bilder
 
 
+def anleitung_pdf(projekt, gid: int, plan: dict, ziel, erg=None, szene=None, explosion=None) -> Path:
+    """Montageanleitung mit 3D-Bildern als PDF – auch ohne geöffnete Montageseite (technische Dokumentation)."""
+    from ..pdf import montageanleitung_erstellen
+    g = projekt.baugruppe(gid)
+    definition = g["definition"]
+    if erg is None:
+        erg = projekt.baugruppe_bauen(definition)
+    if szene is None:
+        form = matrix = None
+        if plan.get("vorrichtung"):
+            form = projekt.teil_form(int(plan["vorrichtung"]))["form"]
+            b = M.basis_einbau(definition)
+            matrix = next((x.matrix for x in erg.exemplare if x.einbau == b), None)
+        szene = SZ.aufbauen(erg, form, matrix)
+        explosion = SZ.verschiebungen(szene, M.explosion(definition, erg, 1.0))
+    bilder = szene_bilder(szene, plan, explosion)
+    vorrichtung = punkte = None
+    if plan.get("vorrichtung"):
+        t = projekt.teil(int(plan["vorrichtung"]))
+        vorrichtung = {"nr": t["nr"], "name": t["name"]}
+        felder = vorlagen.MontageplatteParameter.__dataclass_fields__
+        punkte = vorlagen.montageplatte_aufnahmepunkte(
+            vorlagen.MontageplatteParameter(**{k: v for k, v in t["parameter"].items() if k in felder}))
+    return Path(montageanleitung_erstellen(g, M.nummerieren(plan), bilder, erg.stueckliste, ziel, projekt.name,
+                                           vorrichtung, punkte))
+
+
 class MontageSeite(QWidget):
     meldung = Signal(str, bool)
     gespeichert = Signal()
@@ -559,16 +586,6 @@ class MontageSeite(QWidget):
                                                   f"Montageanleitung_{g['nr']}.pdf", "PDF (*.pdf)")
             if not ziel:
                 return None
-        from ..pdf import montageanleitung_erstellen
-        bilder = szene_bilder(self.szene, self.plan, self.explosion_basis)
-        vorrichtung = punkte = None
-        if self.plan.get("vorrichtung"):
-            t = self.projekt.teil(int(self.plan["vorrichtung"]))
-            vorrichtung = {"nr": t["nr"], "name": t["name"]}
-            felder = vorlagen.MontageplatteParameter.__dataclass_fields__
-            punkte = vorlagen.montageplatte_aufnahmepunkte(
-                vorlagen.MontageplatteParameter(**{k: v for k, v in t["parameter"].items() if k in felder}))
-        pfad = montageanleitung_erstellen(g, M.nummerieren(self.plan), bilder, self.erg.stueckliste, ziel,
-                                          self.projekt.name, vorrichtung, punkte)
+        pfad = anleitung_pdf(self.projekt, self.gid, self.plan, ziel, self.erg, self.szene, self.explosion_basis)
         self.meldung.emit(f"Montageanleitung gespeichert: {Path(pfad).name}", False)
         return Path(pfad)

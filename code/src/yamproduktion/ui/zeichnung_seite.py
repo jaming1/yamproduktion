@@ -169,14 +169,14 @@ class ZeichnungSeite(QWidget):
 
     def oeffnen(self, typ: str, id_: int):
         self.objekt = (typ, id_)
-        self.toleranzen.clear()
+        self.toleranzen.setText(self.projekt.passmasse(typ, id_) if self.projekt else "")
         self.laden()
         self.erstellen()
 
     def _gewaehlt(self):
         daten = self.wahl.currentData()
         self.objekt = (daten.split(":")[0], int(daten.split(":")[1])) if daten else None
-        self.toleranzen.clear()
+        self.toleranzen.setText(self.projekt.passmasse(*self.objekt) if self.objekt and self.projekt else "")
         self.erstellen()
 
     def _knoepfe(self):
@@ -185,12 +185,8 @@ class ZeichnungSeite(QWidget):
 
     @staticmethod
     def toleranzen_lesen(text: str) -> dict:
-        out = {}
-        for teil in text.replace(",", ";").split(";"):
-            worte = teil.split()
-            if len(worte) >= 2:
-                out[worte[0].lstrip("Ø⌀").replace(",", ".")] = " ".join(worte[1:])
-        return out
+        from ..modell import Projekt
+        return Projekt.passmasse_lesen(text)
 
     # ---------- Erstellen
     def erstellen(self) -> Z.Zeichnung | None:
@@ -198,29 +194,11 @@ class ZeichnungSeite(QWidget):
             return None
         typ, id_ = self.objekt
         p = self.projekt
-        felder = {"projekt": p.name, "ersteller": self.ersteller.text().strip()}
-        stueckliste = positionen = None
         try:
-            if typ == "teil":
-                t = p.teil(id_)
-                form = p.teil_form(id_)["form"]
-                felder.update(benennung=t["name"], sachnummer=t["nr"], werkstoff=t["werkstoff"],
-                              masse=f"{formatiere(t['masse'])} kg" if t["masse"] else "",
-                              version=f"V{t['version']} · {t['status']}")
-            else:
-                g = p.baugruppe(id_)
-                r = p.baugruppe_bauen(g["definition"])
-                if not r.ok:
-                    raise ProjektFehler(r.fehler)
-                form = r.gesamtform()
-                stueckliste, positionen = r.stueckliste, r.positionspunkte()
-                felder.update(benennung=g["name"], sachnummer=g["nr"], werkstoff="siehe Stückliste",
-                              masse=f"{formatiere(r.masse)} kg", version=f"V{g['version']} · {g['status']}")
             schnitt = {"auto": None, "ja": True, "nein": False}[self.schnitt.currentData()]
-            self.zeichnung = Z.zeichnung_erstellen(form, felder, schnitt=schnitt,
-                                                   toleranzen=self.toleranzen_lesen(self.toleranzen.text()),
-                                                   massstab=self.massstab.currentData(), stueckliste=stueckliste,
-                                                   positionen=positionen)
+            p.passmasse_speichern(typ, id_, self.toleranzen.text().strip())
+            self.zeichnung = p.zeichnung(typ, id_, self.ersteller.text().strip(), schnitt=schnitt,
+                                         massstab=self.massstab.currentData())
             self.fehler.hide()
         except (ProjektFehler, ValueError, TypeError) as exc:
             self.zeichnung = None

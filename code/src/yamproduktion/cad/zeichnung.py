@@ -76,6 +76,7 @@ class Zeichnung:
     breite: float = BLATT[0]
     hoehe: float = BLATT[1]
     hinweise: list = field(default_factory=list)
+    masse: list = field(default_factory=list)      # Maßtexte in Reihenfolge (für Prüfmerkmale, M43)
 
     def linie(self, *a, art="sichtbar"):
         self.elemente.append(Linie(*a, art=art))
@@ -228,9 +229,10 @@ def mass_waagerecht(z: Zeichnung, x0, x1, y_kante0, y_kante1, y_linie, text):
         _pfeil(z, x0, y_linie, (1, 0))
         _pfeil(z, x1, y_linie, (-1, 0))
     z.text((x0 + x1) / 2, y_linie + 1.2, text, 3.5, "mitte")
+    z.masse.append({"text": text, "innen": False})
 
 
-def mass_senkrecht(z: Zeichnung, y0, y1, x_kante0, x_kante1, x_linie, text):
+def mass_senkrecht(z: Zeichnung, y0, y1, x_kante0, x_kante1, x_linie, text, innen: bool = False):
     links = x_linie < min(x_kante0, x_kante1)
     s = -1.0 if links else 1.0
     z.linie(x_kante0 + s, y0, x_linie + 2 * s, y0, art="duenn")
@@ -243,6 +245,7 @@ def mass_senkrecht(z: Zeichnung, y0, y1, x_kante0, x_kante1, x_linie, text):
         _pfeil(z, x_linie, y0, (0, 1) if y0 < y1 else (0, -1))
         _pfeil(z, x_linie, y1, (0, -1) if y0 < y1 else (0, 1))
     z.text(x_linie - 1.2, (y0 + y1) / 2, text, 3.5, "mitte", drehung=90)
+    z.masse.append({"text": text, "innen": innen})
 
 
 def _durchmesser_text(d: float, toleranzen: dict) -> str:
@@ -543,13 +546,14 @@ def zeichnung_erstellen(form, felder: dict, schnitt: bool | None = None, toleran
                 x_m = x_kante - 10 - 9 * aussen_links
                 aussen_links += 1
                 mass_senkrecht(z, y0, y1, nb_v(min(c.von, c.bis) * (1 if c.achse[2] > 0 else -1), 0)[0],
-                               nb_v(min(c.von, c.bis) * (1 if c.achse[2] > 0 else -1), 0)[0], x_m, text)
+                               nb_v(min(c.von, c.bis) * (1 if c.achse[2] > 0 else -1), 0)[0], x_m, text, c.innen)
                 continue
             # Durchmessermaß im Teil (senkrechte Maßlinie mit Text)
             z.linie(x, y0, x, y1, art="duenn")
             _pfeil(z, x, y0, (0, -1))
             _pfeil(z, x, y1, (0, 1))
             z.text(x - 1.2, (y0 + y1) / 2 + (6 if c.innen else 0), text, 3.5, "mitte", drehung=90)
+            z.masse.append({"text": text, "innen": c.innen})
         # Absatzmaße: Kettenmaße der Zylinderlängen über der Ansicht
         stufen = sorted(set(ebenen_quer_zur_achse(form)) | {round(gv[0], 3), round(gv[2], 3)})
         stufen = [s for s in stufen if gv[0] - 1e-6 <= s <= gv[2] + 1e-6]
@@ -586,6 +590,8 @@ def zeichnung_erstellen(form, felder: dict, schnitt: bool | None = None, toleran
     for (d_l, d_lk), orte in sorted(loecher.items()):
         z.text(ml[0], ml[1] - bl[1] / 2 - 18 - 6 * zeile,
                f"{len(orte)}× Ø{formatiere(d_l)} auf Lochkreis Ø{formatiere(d_lk)}", 3.5, "mitte")
+        z.masse.append({"text": f"{len(orte)}× Ø{formatiere(d_l)}", "innen": True})
+        z.masse.append({"text": f"Lochkreis Ø{formatiere(d_lk)}", "innen": False})
         # Lochkreis als Mittellinie
         cx, cy = nb_l(0.0, 0.0)
         r = d_lk / 2 * m

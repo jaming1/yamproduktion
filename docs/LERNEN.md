@@ -79,3 +79,10 @@
 - **Erkenntnis Darstellung:** Breite Tabellen mit festen Spaltenbreiten und einer dehnbaren Textspalte planen, sonst läuft die Seite seitlich über; volle Texte als Tooltip.
 - **Für den Skill:** Datumsangaben in Oberfläche und PDF immer deutsch (TT.MM.JJJJ), intern ISO speichern.
 
+## MS12 (04.11.2026)
+- **Gut:** Die Zeichnung merkt sich ihre Maßtexte – der Prüfplan liest genau das, was auf dem Blatt steht, statt die Geometrie ein zweites Mal auszuwerten.
+- **Gut:** Vier Listen (FMEA, Risiko, Normen, Abweichungen) aus einer Spaltenbeschreibung – Oberfläche und PDF können nicht auseinanderlaufen.
+- **Erkenntnis Fachlich:** Eine Risikobeurteilung aus einer Vorlage zeigte sofort „alles akzeptabel“, weil das Restrisiko schon eingetragen war. Restrisiko gilt erst nach Umsetzung – sonst täuscht das Werkzeug Sicherheit vor.
+- **Erkenntnis:** Passmaße mit Komma (Ø13,5 H7) brauchen eine Trennung nur an „;“ oder „, “ – sonst wird die Zahl zerschnitten.
+- **Erkenntnis Darstellung:** Tabellenköpfe dürfen nicht abgeschnitten werden – Spaltenbreite mindestens so breit wie die Überschrift; bei breiten Tabellen die Ampel zusätzlich vorne in der Nummer zeigen.
+- **Für den Skill:** Interne Schlüssel (hier `lasten_iec`) beim Verknüpfen immer aus der Quelle lesen, nicht aus dem Seitennamen raten – der Test hat es gefunden.
