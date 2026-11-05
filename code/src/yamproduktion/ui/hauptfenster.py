@@ -47,6 +47,7 @@ NAVIGATION = [
     ("   Leistungskurve & Ertrag", "ertrag"),
     ("   Lastannahmen", "lasten"),
     ("   Antriebsstrang", "antrieb"),
+    ("   Rotorblatt (BEM)", "rotorblatt"),
     ("MASCHINENELEMENTE", None),
     ("   Welle", "welle"),
     ("   Lager", "lager"),
@@ -86,6 +87,7 @@ NAVIGATION = [
     ("Werkstoffe", "werkstoffe"),
 ]
 RECHENSEITEN = {"rotor": "rotorauslegung", "ertrag": "ertrag", "lasten": "lasten_iec", "antrieb": "antrieb",
+                "rotorblatt": "rotorblatt_bem",
                 **{t: t for t in ("welle", "lager", "schrauben", "passfeder", "pressverband", "schweissnaht",
                                   "getriebe", "turm", "bremse")}}
 

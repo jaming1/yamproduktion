@@ -4,11 +4,11 @@ Jede Art ist ein Modul mit: TYP, TITEL, KURZ, BESCHREIBUNG, HAUPT, FELDER, Einga
 FELD_EINHEITEN, FELD_NAMEN, FELD_SUCHBEGRIFFE (Werte aus Anforderungen) und BERECHNUNGS_QUELLEN
 (Werte aus anderen gespeicherten Berechnungen).
 """
-from . import (antrieb, bremse, ertrag, getriebe, lager, lasten, rotor, schrauben, schweissnaht, turm, welle,
+from . import (antrieb, blatt_bem, bremse, ertrag, getriebe, lager, lasten, rotor, schrauben, schweissnaht, turm, welle,
                welle_nabe)
 
 # Windkraft (MS4) und Maschinenelemente (MS5); welle_nabe liefert zwei Arten als Objekte
-WINDKRAFT = [rotor, ertrag, lasten, antrieb]
+WINDKRAFT = [rotor, ertrag, lasten, antrieb, blatt_bem]
 MASCHINENELEMENTE = [welle, lager, schrauben, welle_nabe.passfeder_art, welle_nabe.press_art, schweissnaht,
                      getriebe, turm, bremse]
 MODULE = WINDKRAFT + MASCHINENELEMENTE
