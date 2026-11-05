@@ -11,7 +11,7 @@ from yamproduktion.modell import Projekt
 from yamproduktion.ui import thema
 from yamproduktion.ui.kollision_seite import LEER_TEXT, KollisionSeite
 
-from test_oberflaeche import app  # noqa: F401
+from test_oberflaeche import app, fenster  # noqa: F401
 
 BILDER = Path(__file__).with_name("screenshots")
 
@@ -199,3 +199,18 @@ def test_kollision_leer(seite, tmp_path, app):  # noqa: F811
     projekt.schliessen()
     seite.setze_projekt(None)
     assert seite.leer.isVisible()
+
+
+def test_kollision_im_hauptfenster(fenster, tmp_path):  # noqa: F811
+    """Navigationseintrag „Kollision & Schwerpunkt“ öffnet die Seite mit den Baugruppen des Projekts."""
+    from yamproduktion.ui.hauptfenster import NAVIGATION
+    projekt = Projekt.neu(tmp_path / "H", "Haupt", "")
+    projekt.baugruppe_speichern("Muttern", {"parameter": [], "einbauten": [
+        {"id": "E1", "art": "normteil", "norm": "ISO 4032 M16", "name": "Mutter", "lage": {}},
+        {"id": "E2", "art": "normteil", "norm": "ISO 4032 M16", "name": "Mutter 2", "lage": {"x": "5"}}]})
+    fenster.projekt_laden(projekt)
+    assert any(s == "kollision" for _, s in NAVIGATION)
+    fenster.gehe_zu("kollision")
+    assert fenster.stapel.currentWidget() is fenster.kollision
+    assert fenster.kollision.auswahl.count() == 1
+    assert fenster.kollision.pruefen().fehler_anzahl == 1

@@ -164,3 +164,14 @@
 - **Yamaktaba als Archiv**: „In Yamaktaba archivieren“ (Ablage und Abnahme) legt Projekt-ZIP und Unterlagen ab, PDFs werden durchsuchbare Bücher in „99 Projekte & Medien“ und in der Sammlung „YamProduktion: <Projekt>“; doppelte PDFs werden erkannt
 - Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
 - 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel
+
+## Unveröffentlicht
+
+### K4 Kollisionsprüfung, Masse und Schwerpunkt
+- Neue Seite **Konstruktion › Kollision & Schwerpunkt**: prüft eine gespeicherte Baugruppe paarweise auf **Durchdringung** (mit Überschneidungsvolumen), **Spiel zu klein** (unter dem einstellbaren Mindestabstand, je Baugruppe gemerkt) und **Berührung** (z. B. Lager auf Welle, kein Fehler)
+- Vorfilter über Hüllboxen: weit auseinanderliegende Teile kosten keine Rechenzeit; Lochkreis-Exemplare werden einzeln geprüft und benannt („Schraube (3/8)“)
+- Gewollte Überschneidungen (Presspassung, vereinfachte Schraube ohne Bohrung) mit Begründung als Ausnahme vermerken; gilt für das Paar von Einbauten, steht im Verlauf der Baugruppe, lässt sich aufheben (E41)
+- 3D-Ansicht färbt Teile mit offenem Befund orange; Klick auf einen Befund zeigt nur dessen zwei Teile und den Ort; Schwerpunkt als Marke „S“
+- Masse und Schwerpunkt jetzt mit **Massenträgheit** um den Schwerpunkt (Hauptträgheitsmomente in kg·m²) und **Masse je Einbau** mit Anteil; Teile ohne Masse werden genannt
+- Prüfbericht als PDF (Befunde, Begründungen, Masse, Schwerpunkt, Trägheit); wird als Unterlage im Projekt gemerkt
+- Projektdatei Schema 13: neue Tabelle `kollision_ausnahme`, ältere Projekte werden beim Öffnen ergänzt

@@ -24,6 +24,7 @@ from .betrieb_seiten import InbetriebnahmeSeite, WartungSeite
 from .planung_seiten import AufgabenSeite, BudgetSeite
 from .qualitaet_seiten import DokuSeite, PruefplanSeite, TabellenSeite
 from .baugruppen_seite import BaugruppenSeite
+from .kollision_seite import KollisionSeite
 from .modellier_seite import ModellierSeite
 from .kosten_seite import KostenSeite
 from .konzept_seiten import FunktionenSeite, IdeenSeite, KonzeptSeite
@@ -61,6 +62,7 @@ NAVIGATION = [
     ("   Bauteile (3D)", "bauteile"),
     ("   Modellieren", "modellieren"),
     ("   Baugruppen", "baugruppen"),
+    ("   Kollision & Schwerpunkt", "kollision"),
     ("   Zeichnungen", "zeichnungen"),
     ("FERTIGUNG", None),
     ("   Arbeitspläne", "arbeitsplaene"),
@@ -108,6 +110,7 @@ class Hauptfenster(QMainWindow):
         self.bauteile = BauteilSeite()
         self.modellieren = ModellierSeite()
         self.baugruppen = BaugruppenSeite()
+        self.kollision = KollisionSeite()
         self.zeichnungen = ZeichnungSeite()
         self.arbeitsplaene = ArbeitsplanSeite()
         self.kosten = KostenSeite()
@@ -131,7 +134,7 @@ class Hauptfenster(QMainWindow):
                        "rotor": self.rotor, "ideen": self.ideen, "funktionen": self.funktionen,
                        "konzept": self.konzept, "werkstoffe": self.werkstoffe,
                        "bauteile": self.bauteile, "modellieren": self.modellieren,
-                       "baugruppen": self.baugruppen, "zeichnungen": self.zeichnungen,
+                       "baugruppen": self.baugruppen, "kollision": self.kollision, "zeichnungen": self.zeichnungen,
                        "arbeitsplaene": self.arbeitsplaene, "kosten": self.kosten, "montage": self.montage,
                        "inbetriebnahme": self.inbetriebnahme, "wartung": self.wartung,
                        "pruefplaene": self.pruefplaene, **self.qseiten, "doku": self.doku,
@@ -249,7 +252,7 @@ class Hauptfenster(QMainWindow):
     def _arbeitsseiten(self):
         return (self.uebersicht, self.ideen, self.anforderungen, self.funktionen, self.konzept,
                 *self.rechenseiten.values(), self.berechnungen, self.bauteile, self.modellieren,
-                self.baugruppen, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
+                self.baugruppen, self.kollision, self.zeichnungen, self.arbeitsplaene, self.kosten, self.montage,
                 self.inbetriebnahme, self.wartung, self.pruefplaene, *self.qseiten.values(), self.doku,
                 self.aufgaben, self.budget, self.bibliothek, self.abnahme)
 
@@ -356,7 +359,7 @@ class Hauptfenster(QMainWindow):
             self.bauteile.laden()
         elif schluessel == "modellieren":
             self.modellieren.laden()
-        elif schluessel in ("baugruppen", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
+        elif schluessel in ("baugruppen", "kollision", "zeichnungen", "arbeitsplaene", "kosten", "montage", "inbetriebnahme", "wartung",
                             "pruefplaene", "fmea", "abweichung", "risiko", "normen", "doku", "aufgaben", "budget",
                             "bibliothek", "abnahme"):
             self.seiten[schluessel].laden()
