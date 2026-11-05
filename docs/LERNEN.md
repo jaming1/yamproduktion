@@ -114,3 +114,8 @@
 - **Erkenntnis:** Fremde Datenbanken nur mit `mode=ro` öffnen; schreiben nur über die Funktionen der App selbst, damit ihr Schema stimmt.
 - **Erkenntnis:** Für Tests eine kleine Muster-Yamaktaba aus Kopien ihrer Schnittstelle bauen – nie in Yamines echte Bibliothek schreiben.
 - **Für den Skill:** Andere eigene Apps zuerst als Quelle/Archiv anbinden, bevor Daten doppelt gehalten werden.
+
+## K2 Kreativmethoden (05.11.2026)
+- **Gut:** Erst Datenmodell und Logik mit festen Schnittstellen, dann die drei Ansichten parallel von drei Agenten bauen lassen – jede in eigener Datei, mit eigenem Screenshot-Prüfskript. Das Zusammensetzen war danach nur noch Verdrahtung.
+- **Erkenntnis:** Bei Zetteln, Feldern und Knoten keine Versionierung je Beitrag – sonst entstehen Hunderte Verlaufseinträge. Versioniert wird die Sitzung, protokolliert die Übernahme.
+- **Erkenntnis Darstellung:** Ein Knopf mit Menü (`setMenu`) bekommt von Qt schon einen Pfeil; ein eigenes „▾“ im Text ergibt zwei Pfeile.

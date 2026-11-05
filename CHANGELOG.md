@@ -164,3 +164,12 @@
 - **Yamaktaba als Archiv**: „In Yamaktaba archivieren“ (Ablage und Abnahme) legt Projekt-ZIP und Unterlagen ab, PDFs werden durchsuchbare Bücher in „99 Projekte & Medien“ und in der Sammlung „YamProduktion: <Projekt>“; doppelte PDFs werden erkannt
 - Abnahme-Kriterium 10 zählt die deutschen Yamaktaba-Bücher mit
 - 156 automatische Tests (4 neu, mit einer Muster-Yamaktaba) und Screenshots hell/dunkel
+
+## Unveröffentlicht
+- **Kreativmethoden** (K2): neue Seite unter „Ideen & TRIZ“ mit Sitzungen (KS-…) zu einer Leitfrage
+  - **Brainstorming-Board**: Zettel frei verschieben, Gruppen mit eigener Farbe, Klebepunkte, „Beste Ideen“, Regeln und Zeitgeber
+  - **Methode 6-3-5**: Formular je Blatt (2–8 Personen, Runden × 3 Ideen), zeigt wer gerade auf welches Blatt schreibt, Fortschritt und Rundenuhr 5:00
+  - **Mindmap**: Gliederung links, grafische Mindmap rechts (radial, Farbe je Ast), Umhängen per Ziehen, als Text kopierbar
+  - Beitrag mit einem Klick **als Idee** übernehmen (mit Herkunft und Rückverfolgung) oder **als Lösungsweg** in den morphologischen Kasten
+- Projektdatei Schema 11 (neue Tabellen `kreativ`, `kreativ_eintrag`); ältere Projekte werden beim Öffnen ohne Datenverlust umgestellt
+- 10 neue automatische Tests und Screenshots hell/dunkel (100–106)
