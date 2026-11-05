@@ -6,7 +6,7 @@ import pytest
 
 from yamproduktion.cad import baugruppe as BG, geometrie as G, vorlagen as V
 from yamproduktion.fertigung import arbeitsplan as A, schnittdaten as S
-from yamproduktion.modell import NEU_PRUEFEN, Projekt
+from yamproduktion.modell import NEU_PRUEFEN, Projekt, SCHEMA_VERSION
 
 
 def test_schnittdaten_handrechnung():
@@ -133,5 +133,5 @@ def test_arbeitsplan_im_projekt(tmp_path):
     pfad = p.pfad
     p.schliessen()
     p2 = Projekt.oeffnen(pfad)
-    assert p2.meta("schema_version") == "10"
+    assert p2.meta("schema_version") == str(SCHEMA_VERSION)
     p2.schliessen()

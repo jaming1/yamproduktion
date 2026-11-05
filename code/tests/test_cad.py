@@ -6,7 +6,7 @@ import pytest
 from yamproduktion.berechnungen import ARTEN
 from yamproduktion.cad import geometrie as G
 from yamproduktion.cad import vorlagen as V
-from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler
+from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler, SCHEMA_VERSION
 
 
 def test_alle_vorlagen_gueltig():
@@ -171,4 +171,4 @@ def test_alte_projektdatei_bekommt_bauteile(tmp_path):
     p.schliessen()
     p = Projekt.oeffnen(tmp_path / "Alt.yamp", sicherung=False)
     assert p.teile() == []
-    assert p.meta("schema_version") == "10"
+    assert p.meta("schema_version") == str(SCHEMA_VERSION)

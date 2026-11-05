@@ -75,6 +75,8 @@ Status: ⏳ offen · 🔄 in Arbeit · ✅ fertig · ⛔ blockiert
 
 **Kann-Anforderungen** (K2 Kreativmethoden, K3 Blattelementmethode, K5 CAM-Export) kommen nach MS15 oder werden eingeschoben, wenn Zeit bleibt.
 
+- **K4 Kollisionsprüfung, Masse und Schwerpunkt:** ✅ 05.11.2026 – Seite „Kollision & Schwerpunkt“ mit Ausnahmen, Trägheit und Prüfbericht (E41).
+
 ---
 
 ## 3. Was du parallel schon tun kannst

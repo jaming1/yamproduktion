@@ -3,7 +3,7 @@ from datetime import date
 
 import pytest
 
-from yamproduktion.modell import Projekt, ProjektFehler
+from yamproduktion.modell import Projekt, ProjektFehler, SCHEMA_VERSION
 from yamproduktion.planung import kosten as K, zeitplan as Z
 
 
@@ -66,4 +66,4 @@ def test_aufgaben_im_projekt(tmp_path):
     p.kosten_speichern(posten)
     assert p.kosten_posten()[0]["text"] == "Kran"
     p2 = Projekt.oeffnen(p.pfad)
-    assert len(p2.aufgaben()) == len(p.aufgaben()) and p2.meta("schema_version") == "10"
+    assert len(p2.aufgaben()) == len(p.aufgaben()) and p2.meta("schema_version") == str(SCHEMA_VERSION)

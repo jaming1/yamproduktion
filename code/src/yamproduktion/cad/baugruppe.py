@@ -65,6 +65,7 @@ class Exemplar:
     form: object                 # transformierter Körper
     matrix: np.ndarray
     schluessel: str = ""         # Stücklistenschlüssel (Teilnummer oder Norm)
+    masse: float | None = None   # kg je Exemplar (None = unbekannt) – für Trägheit und Masse je Einbau (K4)
 
 
 @dataclass
@@ -193,7 +194,7 @@ def bauen(definition: dict, teil_quelle, ber=None) -> Ergebnis:
                     lagen.append(_matrix(_drehung(0, 0, 0), (r * math.cos(phi), r * math.sin(phi), 0)))
             for L in lagen:
                 MM = M @ L
-                erg.exemplare.append(Exemplar(eid, bewegen(form, MM), MM, schluessel))
+                erg.exemplare.append(Exemplar(eid, bewegen(form, MM), MM, schluessel, masse))
                 if masse:
                     s = eigenschaften(form).schwerpunkt
                     gesamt_m += masse

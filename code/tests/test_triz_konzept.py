@@ -4,7 +4,7 @@ import json
 import pytest
 
 from yamproduktion import triz
-from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler
+from yamproduktion.modell import NEU_PRUEFEN, Projekt, ProjektFehler, SCHEMA_VERSION
 
 
 # ---------------------------------------------------------------- TRIZ-Daten
@@ -179,5 +179,5 @@ def test_schema2_wird_auf_3_umgestellt(tmp_path):
     db.commit()
     db.close()
     p = Projekt.oeffnen(tmp_path / "KWA.yamp")
-    assert p.meta("schema_version") == "10"
+    assert p.meta("schema_version") == str(SCHEMA_VERSION)
     assert p.objekt_neu("idee", titel="neu")["nr"] == "I-001"

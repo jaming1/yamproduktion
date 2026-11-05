@@ -6,7 +6,7 @@ import pytest
 from yamproduktion.berechnungen import ARTEN, wert_aus_ergebnis
 from yamproduktion.berechnungen import schrauben as S
 from yamproduktion.cad import geometrie as G, vorlagen as V
-from yamproduktion.modell import NEU_PRUEFEN, Projekt
+from yamproduktion.modell import NEU_PRUEFEN, Projekt, SCHEMA_VERSION
 from yamproduktion.montage import montageplan as M, szene as SZ
 
 
@@ -121,5 +121,5 @@ def test_montageplan_gondel(tmp_path):
     pfad = p.pfad
     p.schliessen()
     p2 = Projekt.oeffnen(pfad)
-    assert p2.meta("schema_version") == "10"
+    assert p2.meta("schema_version") == str(SCHEMA_VERSION)
     p2.schliessen()
